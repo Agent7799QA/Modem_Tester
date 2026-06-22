@@ -1,0 +1,9 @@
+venv
+__pycache__
+dist
+build
+.vscode
+main.app
+main.build
+main.dist
+.DS_Store
