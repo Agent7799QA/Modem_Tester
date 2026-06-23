@@ -3,10 +3,9 @@
 """
 
 import sys
-import time
 import serial.tools.list_ports
-from modem.controller import ModemController
-from modem.exceptions import ModemConnectionError, ModemCommandError
+from core.modem.controller import ModemController
+from core.modem.exceptions import ModemConnectionError, ModemCommandError
 
 
 def list_available_ports():

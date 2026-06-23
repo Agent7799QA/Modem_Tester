@@ -12,6 +12,7 @@ from .exceptions import (
     ModemTimeoutError,
     ModemNotConnectedError
 )
+from .config import ReconnectConfig
 from .interfaces import IModemController
 
 
@@ -37,6 +38,9 @@ class ModemController(IModemController):
         self.baudrate = baudrate
         self._serial: Optional[serial.Serial] = None
         self._is_connected = False
+        # Настройки переподключения
+        self.reconnect_config = ReconnectConfig()
+        self._reconnect_depth = 0  # счетчик для защиты от зацикливания
 
     def connect(self) -> bool:
         """
@@ -74,6 +78,67 @@ class ModemController(IModemController):
     def is_connected(self) -> bool:
         """Проверить, подключены ли к модему"""
         return self._is_connected and self._serial is not None and self._serial.is_open
+
+    def check_connection(self) -> bool:
+        """Проверить, жив ли модем"""
+        if not self.is_connected():
+            if not self._attempt_reconnect():
+                raise ModemNotConnectedError("Модем не подключен")
+        try:
+            success, _ = self.send_command("help", timeout=0.5)
+            return success
+        except:
+            self._is_connected = False
+            return False
+
+    def reconnect(self, retries: int = 3, delay: float = 1.0) -> bool:
+        """Попытка переподключиться"""
+        self.disconnect()
+        for attempt in range(retries):
+            try:
+                print(f"Попытка переподключения {attempt + 1}/{retries}...")
+                if self.connect():
+                    if self.check_connection():
+                        print("✅ Переподключение успешно")
+                        return True
+                time.sleep(delay)
+            except:
+                time.sleep(delay)
+        print("❌ Не удалось переподключиться")
+        return False
+
+    def _attempt_reconnect(self) -> bool:
+        """
+        Попытка переподключиться с экспоненциальной задержкой
+
+        Returns:
+            bool: True если переподключились успешно
+        """
+        if not self.reconnect_config.enabled:
+            return False
+
+        self.disconnect()
+
+        for attempt in range(self.reconnect_config.attempts):
+            delay = self.reconnect_config.delays[attempt] if attempt < len(
+                self.reconnect_config.delays) else 2.0 ** attempt
+            print(f"⚠️ Попытка переподключения {attempt + 1}/{self.reconnect_config.attempts} (ждем {delay:.1f}с)...")
+            time.sleep(delay)
+
+            try:
+                if self.connect():
+                    if self.check_connection():
+                        print(f"✅ Переподключение успешно (попытка {attempt + 1})")
+                        return True
+                    else:
+                        print(f"⚠️ Модем не отвечает после подключения")
+                else:
+                    print(f"⚠️ Не удалось открыть порт")
+            except Exception as e:
+                print(f"⚠️ Ошибка при переподключении: {e}")
+
+        print(f"❌ Не удалось переподключиться после {self.reconnect_config.attempts} попыток")
+        return False
 
     def send_command(self, command: str, timeout: float = COMMAND_TIMEOUT) -> Tuple[bool, str]:
         """
@@ -124,8 +189,27 @@ class ModemController(IModemController):
                 return False, ""
 
         except serial.SerialException as e:
+            print(f"⚠️ Потеря связи с модемом на {self.com_port}: {e}")
             self._is_connected = False
-            raise ModemCommandError(f"Ошибка при отправке команды: {e}")
+            if self._serial:
+                try:
+                    self._serial.close()
+                except:
+                    pass
+                self._serial = None
+
+            # Пытаемся переподключиться
+            if self.reconnect_config.enabled and self._reconnect_depth < self.reconnect_config.max_retry_per_command:
+                self._reconnect_depth += 1
+                if self._attempt_reconnect():
+                    print("🔄 Повторная отправка команды...")
+                    self._reconnect_depth = 0
+                    return self.send_command(command, timeout)  # рекурсивный повтор
+                else:
+                    self._reconnect_depth = 0
+                    raise ModemConnectionError(f"Потеря связи с модемом на {self.com_port}: {e}")
+            else:
+                raise ModemConnectionError(f"Потеря связи с модемом на {self.com_port}: {e}")
 
         except Exception as e:
             raise ModemCommandError(f"Неизвестная ошибка: {e}")
@@ -238,3 +322,4 @@ class ModemController(IModemController):
 
     def __repr__(self) -> str:
         return f"ModemController(port={self.com_port}, connected={self.is_connected()})"
+

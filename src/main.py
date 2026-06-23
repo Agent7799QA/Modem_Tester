@@ -1,4 +1,3 @@
-from project_config import *
 from platform_gui import ChooseGui
 import re
 import sys
@@ -7,10 +6,10 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import QTimer, Signal, QTime
 from PySide6.QtGui import QIntValidator 
 from port_monitor import PortMonitorThread
-from rx_parser import RxParsingThread
+from core.parser.rx_parser import RxParsingThread
 from stat_collector import Statistic_Collector
-from command_emulator import CommandEmulator
-from styles import *
+from core.emulator.command_emulator import CommandEmulator
+from ui.styles import *
 GUI = ChooseGui()
 
 

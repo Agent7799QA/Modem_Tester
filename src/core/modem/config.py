@@ -2,10 +2,9 @@
 Конфигурация модема Салангана-К3
 """
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from typing import Optional, Dict, List
 import json
-
 
 @dataclass
 class ModemConfig:
@@ -95,3 +94,13 @@ class ModemConfig:
         with open(filename, 'r') as f:
             data = json.load(f)
         return cls(**data)
+
+@dataclass
+class ReconnectConfig:
+    """
+    Настройки переподключения к модему
+    """
+    attempts: int = 3                          # количество попыток
+    delays: List[float] = field(default_factory=lambda: [1.0, 2.0, 4.0])  # задержки между попытками (сек)
+    enabled: bool = True                       # включено/выключено
+    max_retry_per_command: int = 1             # сколько раз повторять команду после переподключения

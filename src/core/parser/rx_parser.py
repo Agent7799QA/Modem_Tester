@@ -1,4 +1,4 @@
-from parser_base import BaseParsingThread
+from core.parser.parser_base import BaseParsingThread
 from typing import Container
 from crsf_parser import CRSFParser, PacketValidationStatus
 from serial import SerialException

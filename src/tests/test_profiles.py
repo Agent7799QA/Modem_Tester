@@ -2,9 +2,9 @@
 Тестирование работы с профилями
 """
 
-from modem.controller import ModemController
+from core.modem.controller import ModemController
 from tests.profiles import Profiles
-from modem.exceptions import ModemConnectionError
+from core.modem.exceptions import ModemConnectionError
 
 
 def test_profiles(com_port: str):

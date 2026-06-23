@@ -3,9 +3,7 @@
 """
 
 from typing import Dict, List, Optional
-import json
-from pathlib import Path
-from modem.config import ModemConfig
+from core.modem.config import ModemConfig
 
 
 class Profiles:
