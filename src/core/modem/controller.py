@@ -306,6 +306,7 @@ class ModemController(IModemController):
             "dsss": r"DSSS mode:\s+(\d+)",
             "antenna": r"Antenna:\s+(\w+)",
             "mode": r"Mode:\s+(\w+)",
+            "type": r"Drone RC \(([A-Z]+)\)",
         }
 
         for key, pattern in patterns.items():
