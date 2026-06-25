@@ -4,7 +4,7 @@
 
 import time
 from core.session import ModemSession
-from core.modem.scanner import ModemScanner
+from core.modem.port_scanner import ModemScanner
 from tests.profiles import Profiles
 from core.modem.exceptions import ModemConnectionError
 

@@ -2,7 +2,7 @@
 
 from .controller import ModemController
 from .config import ModemConfig, ReconnectConfig
-from .scanner import ModemScanner, ModemInfo, ModemType, PortType
+from .port_scanner import ModemInfo
 from .exceptions import (
     ModemError,
     ModemConnectionError,
@@ -16,10 +16,7 @@ __all__ = [
     "ModemController",
     "ModemConfig",
     "ReconnectConfig",
-    "ModemScanner",
     "ModemInfo",
-    "ModemType",
-    "PortType",
     "ModemError",
     "ModemConnectionError",
     "ModemCommandError",
