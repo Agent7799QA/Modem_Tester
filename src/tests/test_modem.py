@@ -30,7 +30,6 @@ def get_port_from_user():
     print("   ПОИСК МОДЕМА САЛАНГАНА-К3")
     print("="*50)
 
-    # Получаем список доступных портов
     ports = list_available_ports()
 
     if not ports:
@@ -38,12 +37,10 @@ def get_port_from_user():
         print("   Проверьте подключение модема и установку драйверов.")
         return None
 
-    # Показываем список портов
     print("\nДоступные COM-порты:")
     for i, port in enumerate(ports, 1):
         print(f"  {i}. {port}")
 
-    # Запрашиваем выбор
     print("\n" + "-"*50)
     while True:
         try:
@@ -67,16 +64,74 @@ def get_port_from_user():
             return None
 
 
-def test_modem_connection(com_port: str):
+def ask_full_output() -> bool:
+    """
+    Спросить у пользователя, показывать полный или краткий вывод
+
+    Returns:
+        bool: True если полный вывод, False если краткий
+    """
+    print("\n" + "-"*50)
+    print("   ВЫБОР РЕЖИМА ВЫВОДА")
+    print("-"*50)
+    print("   1. Краткий вывод (только начало)")
+    print("   2. Полный вывод (все данные)")
+
+    while True:
+        try:
+            choice = input("\nВыберите режим (1 или 2): ").strip()
+            if choice == '1':
+                return False
+            elif choice == '2':
+                return True
+            else:
+                print("   ❌ Введите 1 или 2")
+        except KeyboardInterrupt:
+            print("\n\nВыход...")
+            return False
+
+
+def print_response(response: str, full: bool, max_lines: int = 5):
+    """
+    Вывести ответ модема с учётом режима вывода
+
+    Args:
+        response: Ответ модема
+        full: True — полный вывод, False — краткий
+        max_lines: Максимальное строк для краткого вывода
+    """
+    if not response:
+        print("   (пустой ответ)")
+        return
+
+    lines = response.strip().split('\n')
+
+    if full:
+        print(f"   Ответ ({len(lines)} строк):")
+        for line in lines:
+            print(f"      {line}")
+    else:
+        print(f"   Ответ ({len(lines)} строк):")
+        for line in lines[:max_lines]:
+            print(f"      {line}")
+        if len(lines) > max_lines:
+            print(f"      ... и еще {len(lines) - max_lines} строк")
+
+
+def test_modem_connection(com_port: str, full_output: bool = False):
     """
     Тест подключения к модему
 
     Args:
         com_port: Имя COM-порта
+        full_output: True — полный вывод, False — краткий
     """
     print(f"\n=== Тестирование модема на порту {com_port} ===\n")
+    if full_output:
+        print("   Режим: ПОЛНЫЙ ВЫВОД")
+    else:
+        print("   Режим: КРАТКИЙ ВЫВОД")
 
-    # Создаем контроллер
     controller = ModemController(com_port)
 
     try:
@@ -91,13 +146,7 @@ def test_modem_connection(com_port: str):
         success, response = controller.send_command("help")
         if success:
             print("   ✅ Команда выполнена")
-            # Показываем первые строки ответа
-            lines = response.strip().split('\n')
-            print(f"   Ответ ({len(lines)} строк):")
-            for line in lines[:5]:  # Показываем первые 5 строк
-                print(f"      {line}")
-            if len(lines) > 5:
-                print(f"      ... и еще {len(lines) - 5} строк")
+            print_response(response, full_output)
         else:
             print("   ❌ Ошибка выполнения")
             print(f"   Ответ: {response[:100] if response else 'нет ответа'}")
@@ -105,10 +154,15 @@ def test_modem_connection(com_port: str):
         # 3. Получение конфигурации
         print("\n3. Получение текущей конфигурации...")
         config = controller.get_config()
+        # Возвращает все 19 параметров:
+        # protocol, freq, code, attenuation, address, pan, rate,
+        # fhss, dsss, mode, type, baudrate, parity, stopbits,
+        # timeslot, ttl, ack, trim, inverted
         if config:
             print("   ✅ Конфигурация получена")
+            print(f"   Количество параметров: {len(config)}")
             for key, value in config.items():
-                print(f"      {key}: {value}")
+                print(f"      {key}:\t {value}")
         else:
             print("   ❌ Не удалось получить конфигурацию")
 
@@ -168,7 +222,6 @@ def test_modem_connection(com_port: str):
         return 0
 
     finally:
-        # Отключение
         print("\n7. Отключение от модема...")
         controller.disconnect()
         print("   ✅ Отключено")
@@ -187,15 +240,19 @@ def main():
         com_port = sys.argv[1]
         print(f"Использован порт из аргумента: {com_port}")
     else:
-        # Запрашиваем порт у пользователя
         com_port = get_port_from_user()
-
         if not com_port:
             print("\n❌ Порт не выбран. Выход.")
             sys.exit(1)
 
-    # Запускаем тест
-    sys.exit(test_modem_connection(com_port))
+    # Спрашиваем режим вывода (если не передан аргумент)
+    if len(sys.argv) >= 3 and sys.argv[2].lower() in ['full', '--full', '-f']:
+        full_output = True
+        print("   Режим: ПОЛНЫЙ ВЫВОД (из аргумента)")
+    else:
+        full_output = ask_full_output()
+
+    sys.exit(test_modem_connection(com_port, full_output))
 
 
 if __name__ == "__main__":

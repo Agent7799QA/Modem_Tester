@@ -4,7 +4,7 @@
 
 import time
 from core.session import ModemSession
-from core.modem.port_scanner import ModemScanner
+from core.modem.port_scanner import scan_ports, print_modems, find_tx_rx_from_modems
 from tests.profiles import Profiles
 from core.modem.exceptions import ModemConnectionError
 
@@ -17,17 +17,17 @@ def test_session():
 
     # Сначала сканируем порты
     print("\n🔍 Сканирование портов...")
-    results = ModemScanner.scan_all_ports()
-    ModemScanner.print_scan_results(results)
+    results = scan_ports()
+    print_modems(results)
 
-    # Находим TX и RX
-    found = ModemScanner.find_modems()
+    # Находим TX и RX из результатов
+    tx, rx = find_tx_rx_from_modems(results)
 
-    if found.get("tx") and found.get("rx"):
+    if tx and rx:
         print(f"\n✅ Автоматически найдены:")
-        print(f"   TX: {found['tx']}")
-        print(f"   RX: {found['rx']}")
-        session = ModemSession(tx_com=found['tx'], rx_com=found['rx'])
+        print(f"   TX: {tx.port}")
+        print(f"   RX: {rx.port}")
+        session = ModemSession(tx_com=tx.port, rx_com=rx.port)
     else:
         print("\n⚠️ Не все порты найдены автоматически. Переход к ручному выбору...")
         session = ModemSession()  # вызовет ручной выбор
