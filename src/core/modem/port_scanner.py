@@ -152,7 +152,7 @@ def print_modems(modems: List[ModemInfo]) -> None:
                 print(f"   SN: {info.serial_number}")
             if info.config:
                 params = []
-                for key in ["freq", "code", "fhss", "dsss", "rate", "address"]:
+                for key in ["freq", "code", "fhss", "dsss", "rate", "address", "bind"]:
                     if key in info.config:
                         params.append(f"{key}={info.config[key]}")
                 if params:
