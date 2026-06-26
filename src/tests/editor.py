@@ -2,13 +2,15 @@
 Интерактивный редактор параметров модема
 """
 
-import sys
+
 from typing import Dict, List, Optional, Any
 from core.modem.controller import ModemController
 from core.modem.port_scanner import scan_ports, print_modems
 from core.modem.exceptions import ModemConnectionError
 from core.modem.parameters import ModemParameters, ParamDef
 from core.modem.profile_loader import ProfileLoader
+
+
 
 
 class ModemEditor:
@@ -54,13 +56,41 @@ class ModemEditor:
         print(f"   ТЕКУЩИЕ ПАРАМЕТРЫ ({modem_type})")
         print("-" * 60)
 
-        params = ModemParameters.get_all_params(modem_type)
+        # Получаем список ключей из JSON
+        from core.modem.profile_loader import ProfileLoader
+        if modem_type == "TX":
+            default_config = ProfileLoader.get_tx_config()
+        else:
+            default_config = ProfileLoader.get_rx_config()
+
+        display_params = list(default_config.keys()) if default_config else []
+
         idx = 1
-        for param_name, param_def in params.items():
-            current = config.get(param_name, "не установлен")
+        for param_name in display_params:
+            # Пропускаем служебные
+            if param_name in ["version", "sn"]:
+                continue
+
+            param_def = ModemParameters.get_param_def(param_name)
+            if not param_def:
+                continue
+
+            # Если параметра нет в config — пропускаем (не показываем)
+            if param_name not in config:
+                continue
+
+            current = config[param_name]
             options_str = ModemParameters.format_options(param_name)
-            print(f"   {idx:2d}. {param_def.description:30} = {current}  [{options_str}]")
+
+            if param_name == "invert":
+                display_value = "on" if current else "off"
+                print(f"   {idx:2d}. {param_def.description:30} = {display_value}  [{options_str}]")
+            else:
+                print(f"   {idx:2d}. {param_def.description:30} = {current}  [{options_str}]")
             idx += 1
+
+        if idx == 1:
+            print("   (нет доступных параметров)")
 
         print("\n   0. Назад к выбору модема")
         print("-" * 60)

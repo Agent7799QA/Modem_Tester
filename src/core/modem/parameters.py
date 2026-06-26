@@ -253,10 +253,10 @@ class ModemParameters:
         "led": r"Onboard LED is (ON|OFF)",
         "max_clients": r"Max clients:\s*(\d+)",
         "extmode": r"Interface mode:\s*(\w+)",
-        "extpinmode0": r"Pin 0:\s*Mode:\s*(\w+)",
-        "extpindep0": r"Pin 0:\s*Dependency:\s*(\d+)",
-        "extpinmode1": r"Pin 1:\s*Mode:\s*(\w+)",
-        "extpindep1": r"Pin 1:\s*Dependency:\s*(\d+)",
+        "extpinmode0": r"Pin 0:.*?Mode:\s*(\w+)",
+        "extpindep0": r"Pin 0:.*?Dependency:\s*(\d+)",
+        "extpinmode1": r"Pin 1:.*?Mode:\s*(\w+)",
+        "extpindep1": r"Pin 1:.*?Dependency:\s*(\d+)",
     }
 
     @classmethod
@@ -336,20 +336,62 @@ class ModemParameters:
         return ""
 
     @classmethod
-    def parse_print_output(cls, output: str) -> Dict:
-        """
-        Парсинг вывода команды print
+    def parse_print_output(cls, output: str, modem_type: str = "TX") -> Dict:
+        """Парсинг вывода команды print"""
+        from core.modem.profile_loader import ProfileLoader
 
-        Args:
-            output: Вывод команды print
+        # Загружаем конфигурацию по умолчанию для определения целевых ключей
+        if modem_type == "TX":
+            default_config = ProfileLoader.get_tx_config()
+        else:
+            default_config = ProfileLoader.get_rx_config()
 
-        Returns:
-            Dict: Распарсенные настройки
-        """
+        target_keys = list(default_config.keys()) if default_config else []
+
         config = {}
 
-        for key, pattern in cls.PRINT_PATTERNS.items():
-            match = re.search(pattern, output, re.IGNORECASE)
+        # Паттерны для парсинга
+        patterns = {
+            "protocol": r"RC protocol:\s+(\w+)",
+            "freq": r"Central frequency:\s*(\d+)",
+            "code": r"Channel code:\s*(\d+)",
+            "attenuation": r"Attenuation:\s*(\d+)\s+dB",
+            "address": r"Module address:\s*(\d+)",
+            "pan": r"Network address:\s*(\d+)",
+            "bind": r"Binded address:\s*(\d+)",
+            "rate": r"Link rate:\s*(\d+)",
+            "fhss": r"FHSS mode:\s*(\d+)",
+            "dsss": r"DSSS mode:\s*(\d+)",
+            "mode": r"Mode:\s*([\w\s]+?)(?:\n|$|\r)",
+            "type": r"Drone RC \(([A-Z]+)\)",
+            "baudrate": r"Baudrate:\s*(\d+)",
+            "parity": r"Parity:\s*(\w+)",
+            "stopbits": r"Stop bits:\s*(\d+)",
+            "timeslot": r"Time slotting:\s*(\w+)",
+            "ttl": r"Retransmissions:\s*(\w+)",
+            "ack": r"Acknowledge:\s*(\w+)",
+            "ewtests": r"EW tests:\s*(\w+)",
+            "trim": r"Crystal trim:\s*(\d+)",
+            "led": r"Onboard LED is (ON|OFF)",
+            "max_clients": r"Max clients:\s*(\d+)",
+            "extmode": r"Interface mode:\s*(\w+)",
+            "extpinmode0": r"Pin 0:.*?Mode:\s*(\w+)",
+            "extpindep0": r"Pin 0:.*?Dependency:\s*(\d+)",
+            "extpinmode1": r"Pin 1:.*?Mode:\s*(\w+)",
+            "extpindep1": r"Pin 1:.*?Dependency:\s*(\d+)",
+        }
+
+        for key, pattern in patterns.items():
+            # Парсим только те ключи, которые есть в JSON
+            if key not in target_keys:
+                continue
+
+            # Для многострочных паттернов используем DOTALL
+            if key in ["extpinmode0", "extpindep0", "extpinmode1", "extpindep1"]:
+                match = re.search(pattern, output, re.IGNORECASE | re.DOTALL)
+            else:
+                match = re.search(pattern, output, re.IGNORECASE)
+
             if match:
                 value = match.group(1).strip()
 
@@ -366,10 +408,10 @@ class ModemParameters:
         if "led" in config:
             config["led"] = 1 if config["led"] == "ON" else 0
 
-        # inverted: определяем из текста
-        if "Not inverted" in output:
+        # inverted: с поддержкой пробелов/табуляции
+        if re.search(r"Not\s+inverted", output, re.IGNORECASE):
             config["inverted"] = False
-        elif "Inverted" in output:
+        elif re.search(r"Inverted", output, re.IGNORECASE):
             config["inverted"] = True
 
         return config

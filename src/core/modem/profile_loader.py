@@ -6,15 +6,19 @@ import json
 from pathlib import Path
 from typing import Dict, Optional, List
 
-
 class ProfileLoader:
     """
     Загрузчик профилей из JSON-файлов
     """
 
-    # Пути к файлам с профилями по умолчанию
-    TX_DEFAULT_PATH = "config/salangan_tx_default.json"
-    RX_DEFAULT_PATH = "config/salangan_rx_default.json"
+
+    # Получаем путь к корню проекта (src/)
+    import os
+    TX_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config",
+                                   "salangan_tx_default.json")
+    RX_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config",
+                                   "salangan_rx_default.json")
+
 
     @staticmethod
     def load_tx_default() -> Dict:
@@ -43,36 +47,33 @@ class ProfileLoader:
         if not data:
             return {}
 
-        # Извлекаем параметры из структуры JSON
         config = {}
 
         # General
         if "General" in data:
             if "protocol" in data["General"]:
                 config["protocol"] = data["General"]["protocol"]
+            if "led" in data["General"]:
+                config["led"] = data["General"]["led"]
 
-        # Radio
+        # Radio (все ключи)
         if "Radio" in data:
-            radio = data["Radio"]
-            for key in ["mode", "rate", "timeslot", "ttl", "ack",
-                        "freq", "code", "attenuation", "address", "pan",
-                        "trim", "fhss", "dsss"]:
-                if key in radio:
-                    config[key] = radio[key]
+            for key in ["mode", "rate", "timeslot", "ttl", "ack", "max_clients",
+                        "freq", "code", "attenuation", "address", "pan", "trim", "fhss", "dsss"]:
+                if key in data["Radio"]:
+                    config[key] = data["Radio"][key]
 
         # Serial
         if "Serial" in data:
-            serial = data["Serial"]
             for key in ["baudrate", "parity", "stopbits", "inverted"]:
-                if key in serial:
-                    config[key] = serial[key]
+                if key in data["Serial"]:
+                    config[key] = data["Serial"][key]
 
         # ExternalInterface
         if "ExternalInterface" in data:
-            ext = data["ExternalInterface"]
-            for key in ["extmode", "extpinmode0", "extpindep0", "extpinmode1", "extpindep1"]:
-                if key in ext:
-                    config[key] = ext[key]
+            for key in ["pin_0_mode", "pin_0_dependency"]:
+                if key in data["ExternalInterface"]:
+                    config[key] = data["ExternalInterface"][key]
 
         return config
 
@@ -89,6 +90,8 @@ class ProfileLoader:
         if "General" in data:
             if "protocol" in data["General"]:
                 config["protocol"] = data["General"]["protocol"]
+            if "led" in data["General"]:
+                config["led"] = data["General"]["led"]
 
         # Radio
         if "Radio" in data:
@@ -108,7 +111,7 @@ class ProfileLoader:
         # ExternalInterface
         if "ExternalInterface" in data:
             ext = data["ExternalInterface"]
-            for key in ["extmode", "extpinmode0", "extpindep0", "extpinmode1", "extpindep1"]:
+            for key in ["mode", "pin_0_mode", "pin_0_dependency", "pin_1_mode", "pin_1_dependency"]:
                 if key in ext:
                     config[key] = ext[key]
 

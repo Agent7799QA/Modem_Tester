@@ -88,8 +88,8 @@ def _scan_port(port: str) -> Optional[ModemInfo]:
         version = _extract_version(response)
         serial_number = _extract_serial(response)
 
-        # 4. Читаем конфигурацию через get_config()
-        config = controller.get_config()
+       # 4. Читаем конфигурацию через get_config() с указанием типа
+        config = controller.get_config(modem_type)
 
         controller.disconnect()
 

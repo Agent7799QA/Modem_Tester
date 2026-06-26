@@ -4,6 +4,7 @@
 
 import serial
 import time
+import logging
 from typing import Dict, Tuple, Optional
 from .exceptions import (
     ModemConnectionError,
@@ -14,6 +15,8 @@ from .interfaces import IModemController
 from .config import ReconnectConfig
 from .parameters import ModemParameters
 
+# Настройка логгера для отладки
+logger = logging.getLogger(__name__)
 
 class ModemController(IModemController):
     """
@@ -156,6 +159,14 @@ class ModemController(IModemController):
                     if len(response) == last_response_len and len(response) > 0:
                         break
 
+            # Логируем ответ для диагностики
+            if response and command.strip() in ["help", "print", "stat"]:
+                print(f"\n{'=' * 60}")
+                print(f"📋 ОТВЕТ НА КОМАНДУ: {command}")
+                print(f"{'=' * 60}")
+                print(response)
+                print(f"{'=' * 60}\n")
+
             if response:
                 response_lower = response.lower()
                 if "error" in response_lower or "fail" in response_lower:
@@ -269,9 +280,12 @@ class ModemController(IModemController):
 
         return results
 
-    def get_config(self) -> Dict:
+    def get_config(self, modem_type: str = "TX") -> Dict:
         """
         Получить текущую конфигурацию модема (команда print)
+
+        Args:
+            modem_type: "TX" или "RX" — для парсинга
 
         Returns:
             Dict: Словарь с настройками
@@ -285,7 +299,7 @@ class ModemController(IModemController):
         if not success:
             return {}
 
-        return ModemParameters.parse_print_output(response)
+        return ModemParameters.parse_print_output(response, modem_type)
 
     def stat(self) -> Dict:
         """
