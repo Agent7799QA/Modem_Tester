@@ -122,55 +122,11 @@ class ModemSession:
 
     def _manual_port_selection(self) -> None:
         """Ручной выбор портов пользователем"""
-        ports = [port.device for port in serial.tools.list_ports.comports()]
+        from core.user_input import get_two_ports_from_user
 
-        if not ports:
-            print("❌ COM-порты не найдены.")
-            return
-
-        print("\n📋 Доступные COM-порты:")
-        for i, port in enumerate(ports, 1):
-            print(f"   {i}. {port}")
-
-        # Выбор TX
-        print("\n" + "-" * 40)
-        while True:
-            try:
-                choice = input("Выберите номер порта для TX (или 's' для пропуска): ").strip()
-                if choice.lower() == 's':
-                    self.tx_com = None
-                    break
-                idx = int(choice) - 1
-                if 0 <= idx < len(ports):
-                    self.tx_com = ports[idx]
-                    print(f"   ✅ TX выбран: {self.tx_com}")
-                    break
-                else:
-                    print(f"   ❌ Неверный номер. Введите от 1 до {len(ports)}")
-            except ValueError:
-                print("   ❌ Введите число или 's'")
-
-        # Выбор RX
-        print("\n" + "-" * 40)
-        while True:
-            try:
-                choice = input("Выберите номер порта для RX (или 's' для пропуска): ").strip()
-                if choice.lower() == 's':
-                    self.rx_com = None
-                    break
-                idx = int(choice) - 1
-                if 0 <= idx < len(ports):
-                    # Проверяем, не выбран ли тот же порт, что и для TX
-                    if ports[idx] == self.tx_com and self.tx_com is not None:
-                        print("   ⚠️ Этот порт уже выбран для TX. Выберите другой.")
-                        continue
-                    self.rx_com = ports[idx]
-                    print(f"   ✅ RX выбран: {self.rx_com}")
-                    break
-                else:
-                    print(f"   ❌ Неверный номер. Введите от 1 до {len(ports)}")
-            except ValueError:
-                print("   ❌ Введите число или 's'")
+        tx, rx = get_two_ports_from_user()
+        self.tx_com = tx
+        self.rx_com = rx
 
     def _ensure_controllers(self) -> bool:
         """Создать контроллеры, если порты определены"""

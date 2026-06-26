@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 from core.modem.controller import ModemController
 from core.modem.exceptions import ModemConnectionError
+from core.modem.parameters import ModemParameters
 
 
 @dataclass
@@ -52,17 +53,28 @@ def scan_ports() -> List[ModemInfo]:
 
 
 def _scan_port(port: str) -> Optional[ModemInfo]:
+    """
+    Сканировать один порт
+
+    Args:
+        port: Имя COM-порта
+
+    Returns:
+        Optional[ModemInfo]: Информация о порте
+    """
     controller = ModemController(port)
 
     try:
         if not controller.connect():
             return ModemInfo(port=port, type="NO_MODEM")
 
+        # 1. Отправляем help для проверки
         success, response = controller.send_command("help", timeout=0.5)
         if not success or not response:
             controller.disconnect()
             return ModemInfo(port=port, type="NO_MODEM")
 
+        # 2. Проверяем, что это модем
         is_tx = "Drone RC (TX)" in response
         is_rx = "Drone RC (RX)" in response
 
@@ -71,8 +83,12 @@ def _scan_port(port: str) -> Optional[ModemInfo]:
             return ModemInfo(port=port, type="NO_MODEM")
 
         modem_type = "TX" if is_tx else "RX"
+
+        # 3. Извлекаем версию и SN
         version = _extract_version(response)
         serial_number = _extract_serial(response)
+
+        # 4. Читаем конфигурацию через get_config()
         config = controller.get_config()
 
         controller.disconnect()
@@ -111,28 +127,13 @@ def _extract_serial(response: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
-def find_tx_rx() -> Tuple[Optional[ModemInfo], Optional[ModemInfo]]:
-    """
-    Найти TX и RX модемы
-
-    Returns:
-        Tuple[Optional[ModemInfo], Optional[ModemInfo]]: (tx, rx)
-    """
-    modems = scan_ports()
-    tx = None
-    rx = None
-
-    for m in modems:
-        if m.type == "TX":
-            tx = m
-        elif m.type == "RX":
-            rx = m
-
-    return tx, rx
-
-
 def print_modems(modems: List[ModemInfo]) -> None:
-    """Вывести результаты сканирования всех портов"""
+    """
+    Вывести результаты сканирования всех портов
+
+    Args:
+        modems: Список результатов сканирования
+    """
     if not modems:
         print("\n❌ Порты не найдены")
         return
@@ -151,8 +152,10 @@ def print_modems(modems: List[ModemInfo]) -> None:
             if info.serial_number:
                 print(f"   SN: {info.serial_number}")
             if info.config:
+                # Используем параметры из ModemParameters для отображения
                 params = []
-                for key in ["freq", "code", "fhss", "dsss", "rate", "address", "bind"]:
+                display_keys = ["freq", "code", "fhss", "dsss", "rate", "address", "bind"]
+                for key in display_keys:
                     if key in info.config:
                         params.append(f"{key}={info.config[key]}")
                 if params:

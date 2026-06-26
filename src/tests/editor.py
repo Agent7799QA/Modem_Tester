@@ -7,253 +7,20 @@ from typing import Dict, List, Optional, Any
 from core.modem.controller import ModemController
 from core.modem.port_scanner import scan_ports, print_modems
 from core.modem.exceptions import ModemConnectionError
+from core.modem.parameters import ModemParameters, ParamDef
+from core.modem.profile_loader import ProfileLoader
 
-
-# ============================================================
-# БОЕВЫЕ НАСТРОЙКИ
-# ============================================================
-
-def combat_tx() -> Dict:
-    """TX боевой режим"""
-    return {
-        'freq': 3500,
-        'code': 11,
-        'fhss': 0,
-        'dsss': 0,
-        'rate': 50,
-        'attenuation': 0,
-        'address': 29131,
-        'pan': 56064,
-        'ack': 0,
-        'ttl': 0,
-        'trim': 111,
-        'timeslot': 0,
-        'baudrate': 400000,
-        'parity': 'none',
-        'stopbits': 1,
-        'inverted': False,
-        'mode': '100kbps',
-        'protocol': 'crsf'
-    }
-
-def combat_rx() -> Dict:
-    """RX боевой режим"""
-    return {
-        'freq': 3500,
-        'code': 11,
-        'fhss': 0,
-        'dsss': 0,
-        'rate': 50,
-        'attenuation': 0,
-        'address': 65535,
-        'pan': 56064,
-        'bind': 29131,
-        'trim': 111,
-        'timeslot': 0,
-        'ewtests': 0,
-        'baudrate': 420000,
-        'parity': 'none',
-        'stopbits': 1,
-        'inverted': False,
-        'mode': '100kbps',
-        'protocol': 'crsf'
-    }
-
-
-# ============================================================
-# ОСНОВНОЙ КЛАСС
-# ============================================================
 
 class ModemEditor:
     """
     Интерактивный редактор параметров модема
+    Использует ModemParameters как единый источник истины
     """
 
-    # Общие параметры для TX и RX
-    COMMON_PARAMETERS = {
-        "freq": {
-            "command": "freq",
-            "description": "Central frequency (МГц)",
-            "type": "list",
-            "options": [3500, 4000, 4500, 6500]
-        },
-        "code": {
-            "command": "code",
-            "description": "Channel code",
-            "type": "range",
-            "options": {"min": 1, "max": 24}
-        },
-        "fhss": {
-            "command": "fhss",
-            "description": "FHSS mode",
-            "type": "list",
-            "options": [0, 1, 2, 3, 4]
-        },
-        "dsss": {
-            "command": "dsss",
-            "description": "DSSS mode",
-            "type": "list",
-            "options": [0, 1, 2, 3, 4, 7]
-        },
-        "rate": {
-            "command": "rate",
-            "description": "Link rate (Hz)",
-            "type": "list",
-            "options": [5, 10, 25, 40, 50]
-        },
-        "attenuation": {
-            "command": "attenuation",
-            "description": "Attenuation (dB)",
-            "type": "range",
-            "options": {"min": 0, "max": 30}
-        },
-        "address": {
-            "command": "address",
-            "description": "Module address",
-            "type": "range",
-            "options": {"min": 0, "max": 65534}
-        },
-        "pan": {
-            "command": "pan",
-            "description": "Network address",
-            "type": "range",
-            "options": {"min": 0, "max": 65534}
-        },
-        "baudrate": {
-            "command": "baudrate",
-            "description": "Baudrate",
-            "type": "list",
-            "options": [57600, 100000, 115200, 400000, 420000]
-        },
-        "parity": {
-            "command": "parity",
-            "description": "Parity",
-            "type": "list",
-            "options": ["none", "even", "odd"]
-        },
-        "stopbits": {
-            "command": "stopbits",
-            "description": "Stop bits",
-            "type": "list",
-            "options": [1, 2]
-        },
-        "mode": {
-            "command": "mode",
-            "description": "Mode",
-            "type": "list",
-            "options": ["swarm+", "swarm", "longrange"]
-        },
-        "protocol": {
-            "command": "protocol",
-            "description": "Protocol",
-            "type": "list",
-            "options": ["crsf", "sbus", "mavlink", "raw"]
-        },
-        "timeslot": {
-            "command": "timeslot",
-            "description": "Time slotting",
-            "type": "list",
-            "options": [0, 1, 2]
-        },
-        "trim": {
-            "command": "trim",
-            "description": "Crystal trim (calibration)",
-            "type": "range",
-            "options": {"min": 0, "max": 255}
-        },
-        "invert": {
-            "command": "invert",
-            "description": "Inversion (toggle)",
-            "type": "toggle",
-            "options": None
-        },
-        "led": {
-            "command": "led",
-            "description": "LED (on/off)",
-            "type": "list",
-            "options": ["on", "off"]
-        },
-        "extmode": {
-            "command": "extmode",
-            "description": "External mode",
-            "type": "list",
-            "options": ["off", "bk", "drop", "rssi"]
-        },
-        "extpinmode0": {
-            "command": "extpinmode0",
-            "description": "Pin 0 mode",
-            "type": "list",
-            "options": ["off", "pwm", "servo", "mg90s", "syncout", "debug"]
-        },
-        "extpindep0": {
-            "command": "extpindep0",
-            "description": "Pin 0 dependency",
-            "type": "range",
-            "options": {"min": 1, "max": 70}
-        },
-        "extpinmode1": {
-            "command": "extpinmode1",
-            "description": "Pin 1 mode",
-            "type": "list",
-            "options": ["off", "pwm", "servo", "mg90s", "syncout", "debug"]
-        },
-        "extpindep1": {
-            "command": "extpindep1",
-            "description": "Pin 1 dependency",
-            "type": "range",
-            "options": {"min": 1, "max": 70}
-        }
-    }
-
-    # TX-специфичные параметры
-    TX_PARAMETERS = {
-        "ack": {
-            "command": "ack",
-            "description": "Acknowledge (0=off, 1=on)",
-            "type": "list",
-            "options": [0, 1]
-        },
-        "ttl": {
-            "command": "ttl",
-            "description": "Retransmissions (0=off, 1=on)",
-            "type": "list",
-            "options": [0, 1]
-        },
-        "max_clients": {
-            "command": "max_clients",
-            "description": "Max clients",
-            "type": "range",
-            "options": {"min": 1, "max": 8}
-        }
-    }
-
-    # RX-специфичные параметры
-    RX_PARAMETERS = {
-        "bind": {
-            "command": "bind",
-            "description": "Binded address",
-            "type": "range",
-            "options": {"min": 0, "max": 65535}
-        },
-        "ewtests": {
-            "command": "ewtests",
-            "description": "EW tests (0=off, 1=on)",
-            "type": "list",
-            "options": [0, 1]
-        }
-    }
-
     @staticmethod
-    def get_parameters_for_type(modem_type: str) -> Dict:
+    def get_parameters_for_type(modem_type: str) -> Dict[str, ParamDef]:
         """Получить список параметров для типа модема"""
-        params = ModemEditor.COMMON_PARAMETERS.copy()
-
-        if modem_type == "TX":
-            params.update(ModemEditor.TX_PARAMETERS)
-        elif modem_type == "RX":
-            params.update(ModemEditor.RX_PARAMETERS)
-
-        return params
+        return ModemParameters.get_all_params(modem_type)
 
     @staticmethod
     def detect_modems() -> List[Dict]:
@@ -287,27 +54,16 @@ class ModemEditor:
         print(f"   ТЕКУЩИЕ ПАРАМЕТРЫ ({modem_type})")
         print("-" * 60)
 
-        params = ModemEditor.get_parameters_for_type(modem_type)
+        params = ModemParameters.get_all_params(modem_type)
         idx = 1
-        for param_name, param_info in params.items():
+        for param_name, param_def in params.items():
             current = config.get(param_name, "не установлен")
-            options_str = ModemEditor._format_options(param_info)
-            print(f"   {idx:2d}. {param_info['description']:30} = {current}  [{options_str}]")
+            options_str = ModemParameters.format_options(param_name)
+            print(f"   {idx:2d}. {param_def.description:30} = {current}  [{options_str}]")
             idx += 1
 
         print("\n   0. Назад к выбору модема")
         print("-" * 60)
-
-    @staticmethod
-    def _format_options(param_info: Dict) -> str:
-        """Форматировать варианты для отображения"""
-        if param_info["type"] == "list":
-            return ", ".join(str(o) for o in param_info["options"])
-        elif param_info["type"] == "range":
-            return f"{param_info['options']['min']}-{param_info['options']['max']}"
-        elif param_info["type"] == "toggle":
-            return "toggle (on/off)"
-        return ""
 
     @staticmethod
     def get_user_choice(prompt: str, max_value: int) -> int:
@@ -334,7 +90,7 @@ class ModemEditor:
             print(f"\n✅ Подключено к {port}")
 
             changed = False
-            params = ModemEditor.get_parameters_for_type(modem_type)
+            params = ModemParameters.get_all_params(modem_type)
 
             while True:
                 ModemEditor.show_parameters(config, modem_type)
@@ -352,10 +108,10 @@ class ModemEditor:
 
                 param_names = list(params.keys())
                 param_name = param_names[choice - 1]
-                param_info = params[param_name]
+                param_def = params[param_name]
 
                 new_value = ModemEditor._edit_parameter(
-                    controller, param_name, param_info, config
+                    controller, param_name, param_def, config
                 )
 
                 if new_value is not None:
@@ -382,20 +138,20 @@ class ModemEditor:
     def _edit_parameter(
             controller: ModemController,
             param_name: str,
-            param_info: Dict,
+            param_def: ParamDef,
             config: Dict
     ) -> Optional[Any]:
         """Редактировать один параметр"""
         current = config.get(param_name, "не установлен")
-        command = param_info["command"]
+        command = param_def.command
 
         print(f"\n" + "=" * 50)
-        print(f"   ИЗМЕНЕНИЕ: {param_info['description']}")
+        print(f"   ИЗМЕНЕНИЕ: {param_def.description}")
         print("=" * 50)
         print(f"   Текущее значение: {current}")
         print(f"   Команда: {command}")
 
-        if param_info["type"] == "toggle":
+        if param_def.param_type == "toggle":
             print(f"   Тип: переключатель (toggle)")
             while True:
                 choice = input("\n   Изменить инверсию? (y/n): ").strip().lower()
@@ -415,8 +171,8 @@ class ModemEditor:
                 else:
                     print("   ❌ Введите 'y' или 'n'")
 
-        elif param_info["type"] == "list":
-            options = param_info["options"]
+        elif param_def.param_type == "list":
+            options = param_def.options
             print("\n   Возможные значения:")
             for i, opt in enumerate(options, 1):
                 print(f"      {i}. {opt}")
@@ -450,9 +206,9 @@ class ModemEditor:
                 print(f"   ❌ Ошибка: {response[:50] if response else 'нет ответа'}")
                 return None
 
-        elif param_info["type"] == "range":
-            min_val = param_info["options"]["min"]
-            max_val = param_info["options"]["max"]
+        elif param_def.param_type == "range":
+            min_val = param_def.options["min"]
+            max_val = param_def.options["max"]
             print(f"\n   Диапазон: от {min_val} до {max_val}")
 
             while True:
@@ -484,7 +240,7 @@ class ModemEditor:
                 return None
 
         else:
-            print(f"   ❌ Неизвестный тип параметра: {param_info['type']}")
+            print(f"   ❌ Неизвестный тип параметра: {param_def.param_type}")
             return None
 
     @staticmethod
@@ -512,12 +268,12 @@ class ModemEditor:
                     f"   {i}. {modem['port']} ({modem['type']}) - freq={config.get('freq', '?')}, code={config.get('code', '?')}{bind_str}")
 
             print(f"\n   {len(modems) + 1}. Сравнить параметры TX и RX")
-            print(f"   {len(modems) + 2}. Применить боевые настройки")
+            print(f"   {len(modems) + 2}. Применить настройки по умолчанию")
             print("\n   0. Выход из программы")
             print("-" * 60)
 
             choice = ModemEditor.get_user_choice(
-                f"\nВыберите модем (1-{len(modems)}, {len(modems) + 1}-сравнить, {len(modems) + 2}-боевые, 0-выход): ",
+                f"\nВыберите модем (1-{len(modems)}, {len(modems) + 1}-сравнить, {len(modems) + 2}-настройки по умолчанию, 0-выход): ",
                 len(modems) + 2
             )
 
@@ -530,7 +286,7 @@ class ModemEditor:
                 continue
 
             if choice == len(modems) + 2:
-                ModemEditor.apply_combat_settings(modems)
+                ModemEditor.apply_default_settings(modems)
                 continue
 
             selected = modems[choice - 1]
@@ -690,10 +446,10 @@ class ModemEditor:
         input("\nНажмите Enter для продолжения...")
 
     @staticmethod
-    def apply_combat_settings(modems: List[Dict]) -> None:
-        """Применить боевые настройки ко всем модемам"""
+    def apply_default_settings(modems: List[Dict]) -> None:
+        """Применить настройки по умолчанию ко всем модемам"""
         print("\n" + "=" * 60)
-        print("   ПРИМЕНЕНИЕ БОЕВЫХ НАСТРОЕК")
+        print("   ПРИМЕНЕНИЕ НАСТРОЕК ПО УМОЛЧАНИЮ")
         print("=" * 60)
 
         tx = None
@@ -705,18 +461,27 @@ class ModemEditor:
                 rx = m
 
         if not tx or not rx:
-            print("\n❌ Для боевых настроек нужны оба модема (TX и RX)")
+            print("\n❌ Для применения настроек нужны оба модема (TX и RX)")
             input("\nНажмите Enter для продолжения...")
             return
 
         print(f"\n📌 TX: {tx['port']}")
         print(f"📌 RX: {rx['port']}")
 
-        tx_config = combat_tx()
-        rx_config = combat_rx()
+        # Загружаем настройки из JSON-файлов
+        tx_config = ProfileLoader.get_tx_config()
+        rx_config = ProfileLoader.get_rx_config()
+
+        if not tx_config or not rx_config:
+            print("\n❌ Не удалось загрузить настройки по умолчанию")
+            print("   Проверьте наличие файлов:")
+            print("      - config/salangan_tx_default.json")
+            print("      - config/salangan_rx_default.json")
+            input("\nНажмите Enter для продолжения...")
+            return
 
         print("\n" + "-" * 60)
-        print("   ПАРАМЕТРЫ БОЕВОГО РЕЖИМА")
+        print("   ПАРАМЕТРЫ ПО УМОЛЧАНИЮ")
         print("-" * 60)
 
         print("\n   TX:")
@@ -728,7 +493,7 @@ class ModemEditor:
             print(f"      {key}: {value}")
 
         print("\n" + "-" * 60)
-        confirm = input("\nПрименить боевые настройки? (y/n): ").strip().lower()
+        confirm = input("\nПрименить настройки по умолчанию? (y/n): ").strip().lower()
 
         if confirm not in ['y', 'yes', 'д', 'да']:
             print("\n❌ Отмена")
@@ -744,7 +509,7 @@ class ModemEditor:
 
         print("\n" + "=" * 60)
         if success_tx and success_rx:
-            print("   ✅ БОЕВЫЕ НАСТРОЙКИ ПРИМЕНЕНЫ УСПЕШНО!")
+            print("   ✅ НАСТРОЙКИ ПО УМОЛЧАНИЮ ПРИМЕНЕНЫ УСПЕШНО!")
         else:
             print("   ❌ Ошибка при применении настроек")
             if not success_tx:
@@ -757,7 +522,7 @@ class ModemEditor:
 
     @staticmethod
     def _apply_config_to_modem(port: str, config: Dict, modem_type: str) -> bool:
-        """Применить конфигурацию к модему"""
+        """Применить конфигурацию к модему и проверить результат"""
         controller = ModemController(port)
 
         try:
@@ -770,6 +535,10 @@ class ModemEditor:
                 'pan': 'pan', 'baudrate': 'baudrate', 'parity': 'parity',
                 'stopbits': 'stopbits', 'mode': 'mode', 'protocol': 'protocol',
                 'timeslot': 'timeslot', 'trim': 'trim', 'invert': 'invert',
+                'led': 'led', 'max_clients': 'max_clients',
+                'extmode': 'extmode', 'extpinmode0': 'extpinmode0',
+                'extpindep0': 'extpindep0', 'extpinmode1': 'extpinmode1',
+                'extpindep1': 'extpindep1'
             }
 
             if modem_type == "TX":
@@ -779,6 +548,7 @@ class ModemEditor:
                 param_map['bind'] = 'bind'
                 param_map['ewtests'] = 'ewtests'
 
+            # Формируем команды
             commands = []
             for key, value in config.items():
                 if key in param_map:
@@ -789,6 +559,7 @@ class ModemEditor:
                     else:
                         commands.append(f"{cmd} {value}")
 
+            # Отправляем команды
             success_count = 0
             for cmd in commands:
                 print(f"   → {cmd}")
@@ -798,12 +569,58 @@ class ModemEditor:
                 else:
                     print(f"      ❌ Ошибка: {response[:50] if response else 'нет ответа'}")
 
+            # Проверяем, что настройки применились
+            print("\n   Проверка применённых настроек...")
             new_config = controller.get_config()
-            if new_config:
-                print(f"   ✅ Применено {success_count} из {len(commands)} команд")
-                return success_count > 0
-            else:
+            if not new_config:
                 print(f"   ⚠️ Не удалось проверить конфигурацию")
+                return False
+
+            # Ключевые параметры для проверки
+            key_params = ["freq", "code", "fhss", "dsss", "rate", "attenuation", "address", "pan", "baudrate", "mode",
+                          "protocol"]
+
+            if modem_type == "TX":
+                key_params.extend(["ack", "ttl"])
+            else:
+                key_params.extend(["bind", "ewtests"])
+
+            all_match = True
+            for key in key_params:
+                if key in config:
+                    expected = config[key]
+                    actual = new_config.get(key)
+                    if expected != actual:
+                        print(f"      ❌ {key}: ожидалось {expected}, получено {actual}")
+                        all_match = False
+                    else:
+                        print(f"      ✅ {key}: {expected}")
+
+            # Особый случай: inverted (toggle)
+            if "inverted" in config:
+                expected = config["inverted"]
+                actual = new_config.get("inverted", False)
+                if expected != actual:
+                    print(f"      ❌ inverted: ожидалось {expected}, получено {actual}")
+                    all_match = False
+                else:
+                    print(f"      ✅ inverted: {expected}")
+
+            # Особый случай: led
+            if "led" in config:
+                expected = config["led"]
+                actual = new_config.get("led")
+                if expected != actual:
+                    print(f"      ❌ led: ожидалось {expected}, получено {actual}")
+                    all_match = False
+                else:
+                    print(f"      ✅ led: {expected}")
+
+            if all_match:
+                print(f"\n   ✅ Все параметры проверены и совпадают")
+                return True
+            else:
+                print(f"\n   ⚠️ Некоторые параметры не совпадают")
                 return False
 
         except ModemConnectionError as e:

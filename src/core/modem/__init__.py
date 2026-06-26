@@ -3,6 +3,8 @@
 from .controller import ModemController
 from .config import ModemConfig, ReconnectConfig
 from .port_scanner import ModemInfo
+from .parameters import ModemParameters, ParamDef
+from .profile_loader import ProfileLoader
 from .exceptions import (
     ModemError,
     ModemConnectionError,
@@ -17,6 +19,9 @@ __all__ = [
     "ModemConfig",
     "ReconnectConfig",
     "ModemInfo",
+    "ModemParameters",
+    "ParamDef",
+    "ProfileLoader",
     "ModemError",
     "ModemConnectionError",
     "ModemCommandError",

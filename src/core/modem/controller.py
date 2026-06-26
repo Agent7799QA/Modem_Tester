@@ -4,7 +4,6 @@
 
 import serial
 import time
-import re
 from typing import Dict, Tuple, Optional
 from .exceptions import (
     ModemConnectionError,
@@ -13,6 +12,7 @@ from .exceptions import (
 )
 from .interfaces import IModemController
 from .config import ReconnectConfig
+from .parameters import ModemParameters
 
 
 class ModemController(IModemController):
@@ -40,16 +40,11 @@ class ModemController(IModemController):
 
         # Настройки переподключения
         self.reconnect_config = ReconnectConfig()
-        self._reconnect_depth = 0  # счетчик для защиты от зацикливания
+        self._reconnect_depth = 0
 
     def connect(self) -> bool:
-        """
-        Подключение к модему
-
-        Returns:
-            bool: True если подключение успешно
-        """
-        self._reconnect_depth = 0  # сбрасываем счетчик при новом подключении
+        """Подключение к модему"""
+        self._reconnect_depth = 0
 
         try:
             self._serial = serial.Serial(
@@ -93,12 +88,7 @@ class ModemController(IModemController):
             return False
 
     def _attempt_reconnect(self) -> bool:
-        """
-        Попытка переподключиться с экспоненциальной задержкой
-
-        Returns:
-            bool: True если переподключились успешно
-        """
+        """Попытка переподключиться с экспоненциальной задержкой"""
         if not self.reconnect_config.enabled:
             return False
 
@@ -135,21 +125,17 @@ class ModemController(IModemController):
         Returns:
             Tuple[bool, str]: (успех, ответ модема)
         """
-        # Проверяем подключение и пытаемся переподключиться если нужно
         if not self.is_connected():
             if not self._attempt_reconnect():
                 raise ModemNotConnectedError("Модем не подключен")
 
         try:
-            # Очищаем буфер перед отправкой
             self._serial.reset_input_buffer()
 
-            # Отправляем команду с символом новой строки
             cmd = command.strip() + "\n"
             self._serial.write(cmd.encode('utf-8'))
 
-            # Ждем ответ
-            time.sleep(0.05)  # Небольшая задержка для обработки
+            time.sleep(0.05)
 
             response = ""
             start_time = time.time()
@@ -163,25 +149,19 @@ class ModemController(IModemController):
                     no_data_count = 0
                     last_response_len = len(response)
                 else:
-                    # Если данных нет, ждем 50 мс и проверяем еще раз
                     time.sleep(0.05)
                     no_data_count += 1
-                    # Если дважды подряд не было данных — выходим
                     if no_data_count >= 2 and len(response) > 0:
                         break
-                    # Если есть хоть какие-то данные и они не меняются — выходим
                     if len(response) == last_response_len and len(response) > 0:
                         break
 
-            # Проверяем наличие ошибок в ответе
             if response:
                 response_lower = response.lower()
                 if "error" in response_lower or "fail" in response_lower:
                     return False, response
-                else:
-                    return True, response
-            else:
-                return False, ""
+                return True, response
+            return False, ""
 
         except serial.SerialException as e:
             print(f"⚠️ Потеря связи с модемом на {self.com_port}: {e}")
@@ -193,7 +173,6 @@ class ModemController(IModemController):
                     pass
                 self._serial = None
 
-            # Пытаемся переподключиться
             if self.reconnect_config.enabled and self._reconnect_depth < self.reconnect_config.max_retry_per_command:
                 self._reconnect_depth += 1
                 if self._attempt_reconnect():
@@ -225,14 +204,14 @@ class ModemController(IModemController):
 
         results = {}
 
-        # Проверяем соединение командой help
+        # Проверяем соединение
         success, response = self.send_command("help", timeout=1.0)
         results["connection_check"] = (success, response)
 
         if not success:
             return results
 
-        # Порядок применения команд (важен для зависимостей)
+        # Все возможные команды (из схемы параметров)
         command_order = [
             "protocol",
             "freq",
@@ -269,15 +248,12 @@ class ModemController(IModemController):
                 success, response = self.send_command(cmd)
                 results[cmd_name] = (success, response)
 
-                # Если команда не удалась, останавливаемся
                 if not success:
                     break
 
         # Особый случай: inverted — это toggle
         if "inverted" in config:
             desired = config["inverted"]
-
-            # Получаем текущее состояние
             try:
                 current_config = self.get_config()
                 current = current_config.get("inverted", False)
@@ -309,7 +285,7 @@ class ModemController(IModemController):
         if not success:
             return {}
 
-        return self._parse_print_output(response)
+        return ModemParameters.parse_print_output(response)
 
     def stat(self) -> Dict:
         """
@@ -323,122 +299,11 @@ class ModemController(IModemController):
                 raise ModemNotConnectedError("Модем не подключен")
 
         success, response = self.send_command("stat", timeout=1.0)
+
         if not success:
             return {}
 
-        return self._parse_stat_output(response)
-
-    def _parse_print_output(self, output: str) -> Dict:
-        """
-        Парсинг вывода команды print
-
-        Args:
-            output: Вывод команды print
-
-        Returns:
-            Dict: Распарсенные настройки
-        """
-        config = {}
-
-        # Регулярные выражения для парсинга
-        patterns = {
-            "protocol": r"RC protocol:\s+(\w+)",
-            "freq": r"Central frequency:\s*(\d+)",
-            "code": r"Channel code:\s*(\d+)",
-            "attenuation": r"Attenuation:\s*(\d+)\s+dB",
-            "address": r"Module address:\s*(\d+)",
-            "pan": r"Network address:\s*(\d+)",
-            "bind": r"Binded address:\s*(\d+)",
-            "rate": r"Link rate:\s*(\d+)",
-            "fhss": r"FHSS mode:\s*(\d+)",
-            "dsss": r"DSSS mode:\s*(\d+)",
-            "antenna": r"Antenna:\s+(\w+)",
-            "mode": r"Mode:\s*([\w\s]+?)(?:\n|$|\r)",
-            "type": r"Drone RC \(([A-Z]+)\)",
-            "baudrate": r"Baudrate:\s*(\d+)",
-            "parity": r"Parity:\s*(\w+)",
-            "stopbits": r"Stop bits:\s*(\d+)",
-            "timeslot": r"Time slotting:\s*(\w+)",
-            "ttl": r"Retransmissions:\s*(\w+)",
-            "ack": r"Acknowledge:\s*(\w+)",
-            "ewtests": r"EW tests:\s*(\w+)",
-            "trim": r"Crystal trim:\s*(\d+)",
-            "led": r"Onboard LED is (ON|OFF)",
-            "max_clients": r"Max clients:\s*(\d+)",
-            "extmode": r"Interface mode:\s*(\w+)",
-            "extpinmode0": r"Pin 0:\s*Mode:\s*(\w+)",
-            "extpindep0": r"Pin 0:\s*Dependency:\s*(\d+)",
-            "extpinmode1": r"Pin 1:\s*Mode:\s*(\w+)",
-            "extpindep1": r"Pin 1:\s*Dependency:\s*(\d+)",
-        }
-
-        for key, pattern in patterns.items():
-            match = re.search(pattern, output, re.IGNORECASE)
-            if match:
-                value = match.group(1).strip()
-                # Преобразуем числа
-                if value.isdigit():
-                    config[key] = int(value)
-                elif value.lower() == "enable":
-                    config[key] = 1
-                elif value.lower() == "disable" or value.lower() == "disabled":
-                    config[key] = 0
-                elif value.lower() == "enabled":
-                    config[key] = 1
-                else:
-                    config[key] = value
-
-        # Определяем состояние инверси, led, extmode
-        if "led" in config:
-            config["led"] = 1 if config["led"] == "ON" else 0
-        if "extmode" in config:
-            # extmode может быть "off", "bk", "drop", "rssi"
-            pass  # оставляем как строку
-        if "Not inverted" in output:
-            config["inverted"] = False
-        elif "Inverted" in output:
-            config["inverted"] = True
-
-        return config
-
-    def _parse_stat_output(self, output: str) -> Dict:
-        """
-        Парсинг вывода команды stat
-
-        Формат:
-            Uplink LQ : 100, UplinkRSSI : 94dBm, DownlinkLQ : 100, DownlinkRSSI : 100dBm
-
-        Returns:
-            Dict: {
-                "uplink_lq": int,
-                "uplink_rssi": int,
-                "downlink_lq": int,
-                "downlink_rssi": int
-            }
-        """
-        result = {}
-
-        # Uplink LQ : 100
-        match = re.search(r"Uplink LQ\s*:\s*(\d+)", output)
-        if match:
-            result["uplink_lq"] = int(match.group(1))
-
-        # UplinkRSSI : 94dBm
-        match = re.search(r"UplinkRSSI\s*:\s*(-?\d+)", output)
-        if match:
-            result["uplink_rssi"] = int(match.group(1))
-
-        # DownlinkLQ : 100
-        match = re.search(r"DownlinkLQ\s*:\s*(\d+)", output)
-        if match:
-            result["downlink_lq"] = int(match.group(1))
-
-        # DownlinkRSSI : 100dBm
-        match = re.search(r"DownlinkRSSI\s*:\s*(-?\d+)", output)
-        if match:
-            result["downlink_rssi"] = int(match.group(1))
-
-        return result
+        return ModemParameters.parse_stat_output(response)
 
     def __repr__(self) -> str:
         return f"ModemController(port={self.com_port}, connected={self.is_connected()})"
