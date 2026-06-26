@@ -252,7 +252,14 @@ class ModemController(IModemController):
             "ttl",
             "ack",
             "ewtests",
-            "trim"
+            "trim",
+            "led",
+            "max_clients",
+            "extmode",
+            "extpinmode0",
+            "extpindep0",
+            "extpinmode1",
+            "extpindep1"
         ]
 
         for cmd_name in command_order:
@@ -356,6 +363,13 @@ class ModemController(IModemController):
             "ack": r"Acknowledge:\s*(\w+)",
             "ewtests": r"EW tests:\s*(\w+)",
             "trim": r"Crystal trim:\s*(\d+)",
+            "led": r"Onboard LED is (ON|OFF)",
+            "max_clients": r"Max clients:\s*(\d+)",
+            "extmode": r"Interface mode:\s*(\w+)",
+            "extpinmode0": r"Pin 0:\s*Mode:\s*(\w+)",
+            "extpindep0": r"Pin 0:\s*Dependency:\s*(\d+)",
+            "extpinmode1": r"Pin 1:\s*Mode:\s*(\w+)",
+            "extpindep1": r"Pin 1:\s*Dependency:\s*(\d+)",
         }
 
         for key, pattern in patterns.items():
@@ -374,7 +388,12 @@ class ModemController(IModemController):
                 else:
                     config[key] = value
 
-        # Определяем состояние инверсии
+        # Определяем состояние инверси, led, extmode
+        if "led" in config:
+            config["led"] = 1 if config["led"] == "ON" else 0
+        if "extmode" in config:
+            # extmode может быть "off", "bk", "drop", "rssi"
+            pass  # оставляем как строку
         if "Not inverted" in output:
             config["inverted"] = False
         elif "Inverted" in output:

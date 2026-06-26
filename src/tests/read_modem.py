@@ -3,7 +3,9 @@
 """
 
 import sys
+
 import serial.tools.list_ports
+
 from core.modem.controller import ModemController
 from core.modem.exceptions import ModemConnectionError, ModemCommandError
 

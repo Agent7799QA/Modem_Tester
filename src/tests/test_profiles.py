@@ -82,7 +82,7 @@ def test_profiles(com_port: str):
 
 def main():
     import sys
-    from test_modem import get_port_from_user
+    from read_modem import get_port_from_user
 
     if len(sys.argv) >= 2:
         com_port = sys.argv[1]

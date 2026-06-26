@@ -5,7 +5,6 @@
 import time
 from core.session import ModemSession
 from core.modem.port_scanner import scan_ports, print_modems, find_tx_rx_from_modems
-from tests.profiles import Profiles
 from core.modem.exceptions import ModemConnectionError
 
 
@@ -41,7 +40,7 @@ def test_session():
     print(f"   RX: {session.rx_com}")
 
     try:
-        # 1. Применяем профиль
+        # 1. Применяем профильы
         print("\n" + "-" * 60)
         config = Profiles.basic_3500()
         print("Применяем профиль: basic_3500")

@@ -1,0 +1,34 @@
+{
+  "General": {
+    "version": "4.0.10",
+    "sn": "736bf1e1fce0f34d",
+    "led": "ON",
+    "protocol": "crsf"
+  },
+  "Radio": {
+    "mode": "longrange",
+    "rate": 50,
+    "timeslot": 0,
+    "ttl": 0,
+    "ack": 1,
+    "max_clients": 1,
+    "freq": 3500,
+    "code": 11,
+    "attenuation": 0,
+    "address": 1111,
+    "pan": 56064,
+    "trim": 111,
+    "fhss": 0,
+    "dsss": 0
+  },
+  "Serial": {
+    "baudrate": 400000,
+    "parity": "none",
+    "stopbits": 1,
+    "inverted": false
+  },
+  "ExternalInterface": {
+    "pin_0_mode": "off",
+    "pin_0_dependency": 13
+  }
+}

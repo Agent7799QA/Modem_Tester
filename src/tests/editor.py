@@ -166,6 +166,42 @@ class ModemEditor:
             "description": "Inversion (toggle)",
             "type": "toggle",
             "options": None
+        },
+        "led": {
+            "command": "led",
+            "description": "LED (on/off)",
+            "type": "list",
+            "options": ["on", "off"]
+        },
+        "extmode": {
+            "command": "extmode",
+            "description": "External mode",
+            "type": "list",
+            "options": ["off", "bk", "drop", "rssi"]
+        },
+        "extpinmode0": {
+            "command": "extpinmode0",
+            "description": "Pin 0 mode",
+            "type": "list",
+            "options": ["off", "pwm", "servo", "mg90s", "syncout", "debug"]
+        },
+        "extpindep0": {
+            "command": "extpindep0",
+            "description": "Pin 0 dependency",
+            "type": "range",
+            "options": {"min": 1, "max": 70}
+        },
+        "extpinmode1": {
+            "command": "extpinmode1",
+            "description": "Pin 1 mode",
+            "type": "list",
+            "options": ["off", "pwm", "servo", "mg90s", "syncout", "debug"]
+        },
+        "extpindep1": {
+            "command": "extpindep1",
+            "description": "Pin 1 dependency",
+            "type": "range",
+            "options": {"min": 1, "max": 70}
         }
     }
 
@@ -182,6 +218,12 @@ class ModemEditor:
             "description": "Retransmissions (0=off, 1=on)",
             "type": "list",
             "options": [0, 1]
+        },
+        "max_clients": {
+            "command": "max_clients",
+            "description": "Max clients",
+            "type": "range",
+            "options": {"min": 1, "max": 8}
         }
     }
 
