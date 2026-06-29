@@ -2,53 +2,64 @@
 Тестирование работы с профилями
 """
 
-from cli.profiles import Profiles
+import sys
+
 from core.modem.controller import ModemController
+from cli.profiles import Profiles
 from core.modem.exceptions import ModemConnectionError
+from cli.read_modem import get_port_from_user, list_available_ports
 
 
 def test_profiles(com_port: str):
-    """
-    Тестирование применения профилей к модему
+    """Тестирование применения профилей к модему"""
 
-    Args:
-        com_port: Имя COM-порта
-    """
     print(f"\n=== Тестирование профилей на порту {com_port} ===\n")
 
     controller = ModemController(com_port)
 
     try:
-        # Подключаемся
         print("1. Подключение...")
         controller.connect()
         print("   ✅ Подключено")
 
-        # Получаем текущую конфигурацию
         print("\n2. Текущая конфигурация:")
-        current = controller.get_config()
-        if current:
-            for key, value in current.items():
+        config = controller.get_config()
+
+        if config:
+            # Проверяем, является ли config DTO
+            if hasattr(config, 'to_dict'):
+                config_dict = config.to_dict()
+                print(f"   Тип: DTO ({type(config).__name__})")
+            else:
+                config_dict = config
+                print(f"   Тип: Dict")
+
+            print(f"   Количество параметров: {len(config_dict)}")
+            for key, value in config_dict.items():
                 print(f"      {key}: {value}")
         else:
             print("   ❌ Не удалось получить конфигурацию")
-            return None
+            return
 
-        # Тестируем каждый профиль
         print("\n3. Тестирование профилей:")
 
-        for name in Profiles.list_names():
+        profile_names = Profiles.list_names()
+        print(f"   Найдено профилей: {len(profile_names)}")
+
+        for name in profile_names:
             print(f"\n   📌 Профиль: {name}")
             profile = Profiles.get(name)
             if not profile:
                 print("      ❌ Профиль не найден")
                 continue
 
-            # Применяем профиль
-            config_dict = profile.to_dict()
-            print(f"      Параметры: {config_dict}")
+            # Выводим параметры профиля
+            if hasattr(profile, 'to_dict'):
+                params = profile.to_dict()
+                print(f"      Параметры: {params}")
 
-            results = controller.apply_config(config_dict)
+            # Применяем профиль
+            results = controller.apply_config(profile)
             all_ok = all(success for success, _ in results.values()
                          if isinstance(success, bool))
 
@@ -60,17 +71,25 @@ def test_profiles(com_port: str):
                     if not success and cmd != "connection_check":
                         print(f"         ❌ {cmd}: {response[:50] if response else 'нет ответа'}")
 
-        # Финальная проверка
         print("\n4. Итоговая конфигурация:")
         final = controller.get_config()
         if final:
-            for key, value in final.items():
+            if hasattr(final, 'to_dict'):
+                final_dict = final.to_dict()
+            else:
+                final_dict = final
+            for key, value in final_dict.items():
                 print(f"      {key}: {value}")
         else:
             print("   ❌ Не удалось получить конфигурацию")
 
     except ModemConnectionError as e:
         print(f"❌ Ошибка подключения: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ Неожиданная ошибка: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
     finally:
         controller.disconnect()
@@ -81,15 +100,24 @@ def test_profiles(com_port: str):
 
 
 def main():
-    import sys
-    from read_modem import get_port_from_user
-
+    """Основная функция"""
     if len(sys.argv) >= 2:
         com_port = sys.argv[1]
+        print(f"Использован порт из аргумента: {com_port}")
     else:
+        ports = list_available_ports()
+        if not ports:
+            print("\n❌ COM-порты не найдены.")
+            print("   Проверьте подключение модема и установку драйверов.")
+            sys.exit(1)
+
+        print("\nДоступные COM-порты:")
+        for i, port in enumerate(ports, 1):
+            print(f"  {i}. {port}")
+
         com_port = get_port_from_user()
         if not com_port:
-            print("Порт не выбран. Выход.")
+            print("\n❌ Порт не выбран. Выход.")
             sys.exit(1)
 
     sys.exit(test_profiles(com_port))

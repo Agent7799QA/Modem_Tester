@@ -2,20 +2,21 @@
 Реализация управления модемом Салангана-К3
 """
 
-import logging
-import time
-from typing import Dict, Tuple, Optional
-
 import serial
+import time
+import logging
+from typing import Dict, Tuple, Optional, Union
 
-from .config import ReconnectConfig
 from .exceptions import (
     ModemConnectionError,
     ModemCommandError,
     ModemNotConnectedError
 )
 from .interfaces import IModemController
+from .config import ReconnectConfig
 from .parameters import ModemParameters
+
+from core.dto import TXConfig, RXConfig, ModemConfigDTO
 
 # Настройка логгера для отладки
 logger = logging.getLogger(__name__)
@@ -26,27 +27,19 @@ class ModemController(IModemController):
     Контроллер для работы с модемом Салангана-К3
     """
 
-    # Стандартные настройки для модема
     DEFAULT_BAUDRATE = 115200
     DEFAULT_TIMEOUT = 1.0
     COMMAND_TIMEOUT = 0.5
 
     def __init__(self, com_port: str, baudrate: int = DEFAULT_BAUDRATE):
-        """
-        Инициализация контроллера
-
-        Args:
-            com_port: Имя COM-порта (например "COM3" или "/dev/ttyUSB0")
-            baudrate: Скорость обмена (по умолчанию 115200)
-        """
         self.com_port = com_port
         self.baudrate = baudrate
         self._serial: Optional[serial.Serial] = None
         self._is_connected = False
-
-        # Настройки переподключения
         self.reconnect_config = ReconnectConfig()
         self._reconnect_depth = 0
+
+    # ========== Реализация интерфейса IModemController ==========
 
     def connect(self) -> bool:
         """Подключение к модему"""
@@ -101,8 +94,7 @@ class ModemController(IModemController):
         self.disconnect()
 
         for attempt in range(self.reconnect_config.attempts):
-            delay = self.reconnect_config.delays[attempt] if attempt < len(
-                self.reconnect_config.delays) else 2.0 ** attempt
+            delay = self.reconnect_config.delays[attempt] if attempt < len(self.reconnect_config.delays) else 2.0 ** attempt
             print(f"⚠️ Попытка переподключения {attempt + 1}/{self.reconnect_config.attempts} (ждем {delay:.1f}с)...")
             time.sleep(delay)
 
@@ -163,14 +155,6 @@ class ModemController(IModemController):
                     if len(response) == last_response_len and len(response) > 0:
                         break
 
-            # Логируем ответ для диагностики
-            if response and command.strip() in ["help", "print", "stat"]:
-                print(f"\n{'=' * 60}")
-                print(f"📋 ОТВЕТ НА КОМАНДУ: {command}")
-                print(f"{'=' * 60}")
-                print(response)
-                print(f"{'=' * 60}\n")
-
             if response:
                 response_lower = response.lower()
                 if "error" in response_lower or "fail" in response_lower:
@@ -203,12 +187,12 @@ class ModemController(IModemController):
         except Exception as e:
             raise ModemCommandError(f"Неизвестная ошибка: {e}")
 
-    def apply_config(self, config: Dict) -> Dict[str, Tuple[bool, str]]:
+    def apply_config(self, config: Union[ModemConfigDTO, Dict]) -> Dict[str, Tuple[bool, str]]:
         """
         Применить конфигурацию к модему
 
         Args:
-            config: Словарь с настройками
+            config: DTO (TXConfig или RXConfig) или словарь (для обратной совместимости)
 
         Returns:
             Dict[команда, (успех, ответ)]
@@ -216,6 +200,16 @@ class ModemController(IModemController):
         if not self.is_connected():
             if not self._attempt_reconnect():
                 raise ModemNotConnectedError("Модем не подключен")
+
+        # Преобразуем словарь в DTO, если передан словарь
+        if isinstance(config, dict):
+            # Определяем тип по наличию специфичных полей
+            if "bind" in config or "ewtests" in config:
+                dto = RXConfig.from_dict(config)
+            else:
+                dto = TXConfig.from_dict(config)
+        else:
+            dto = config
 
         results = {}
 
@@ -226,73 +220,27 @@ class ModemController(IModemController):
         if not success:
             return results
 
-        # Все возможные команды (из схемы параметров)
-        command_order = [
-            "protocol",
-            "freq",
-            "fhss",
-            "dsss",
-            "code",
-            "rate",
-            "attenuation",
-            "pan",
-            "address",
-            "bind",
-            "baudrate",
-            "parity",
-            "stopbits",
-            "mode",
-            "timeslot",
-            "ttl",
-            "ack",
-            "ewtests",
-            "trim",
-            "led",
-            "max_clients",
-            "extmode",
-            "extpinmode0",
-            "extpindep0",
-            "extpinmode1",
-            "extpindep1"
-        ]
+        # Получаем команды из DTO
+        commands = dto.get_commands()
 
-        for cmd_name in command_order:
-            if cmd_name in config:
-                value = config[cmd_name]
-                cmd = f"{cmd_name} {value}"
-                success, response = self.send_command(cmd)
-                results[cmd_name] = (success, response)
+        for cmd in commands:
+            success, response = self.send_command(cmd)
+            results[cmd.split()[0]] = (success, response)
 
-                if not success:
-                    break
-
-        # Особый случай: inverted — это toggle
-        if "inverted" in config:
-            desired = config["inverted"]
-            try:
-                current_config = self.get_config()
-                current = current_config.get("inverted", False)
-
-                if current != desired:
-                    print(f"   🔄 Инверсия: {current} → {desired}")
-                    success, response = self.send_command("invert")
-                    results["invert"] = (success, response)
-                else:
-                    results["invert"] = (True, f"already {desired}")
-            except Exception as e:
-                results["invert"] = (False, str(e))
+            if not success:
+                break
 
         return results
 
-    def get_config(self, modem_type: str = "TX") -> Dict:
+    def get_config(self, modem_type: str = "TX") -> Union[TXConfig, RXConfig, Dict]:
         """
         Получить текущую конфигурацию модема (команда print)
 
         Args:
-            modem_type: "TX" или "RX" — для парсинга
+            modem_type: "TX" или "RX"
 
         Returns:
-            Dict: Словарь с настройками
+            TXConfig, RXConfig или Dict (если парсинг не удался)
         """
         if not self.is_connected():
             if not self._attempt_reconnect():
@@ -303,7 +251,29 @@ class ModemController(IModemController):
         if not success:
             return {}
 
-        return ModemParameters.parse_print_output(response, modem_type)
+        # Парсим ответ — уже возвращает TXConfig или RXConfig
+        result = ModemParameters.parse_print_output(response, modem_type)
+
+        if not result:
+            return {}
+
+        # result уже является DTO или Dict
+        return result
+
+    def get_config_dict(self, modem_type: str = "TX") -> Dict:
+        """
+        Получить конфигурацию в виде словаря (для обратной совместимости)
+
+        Args:
+            modem_type: "TX" или "RX"
+
+        Returns:
+            Dict: Словарь с настройками
+        """
+        config = self.get_config(modem_type)
+        if isinstance(config, dict):
+            return config
+        return config.to_dict()
 
     def stat(self) -> Dict:
         """

@@ -2,19 +2,20 @@
 Интерактивный редактор параметров модема
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 
 from core.modem.controller import ModemController
+from core.modem.port_scanner import scan_ports, print_modems, find_tx_rx_from_modems
 from core.modem.exceptions import ModemConnectionError
 from core.modem.parameters import ModemParameters, ParamDef
-from core.modem.port_scanner import scan_ports, print_modems
 from core.modem.profile_loader import ProfileLoader
+from core.dto import TXConfig, RXConfig, ModemConfigDTO
 
 
 class ModemEditor:
     """
     Интерактивный редактор параметров модема
-    Использует ModemParameters как единый источник истины
+    Использует DTO для конфигураций
     """
 
     @staticmethod
@@ -35,12 +36,20 @@ class ModemEditor:
         modems = []
         for info in results:
             if info.type != "NO_MODEM":
+                # Конфигурация может быть словарём или DTO
+                config = info.config
+                if hasattr(config, 'to_dict'):
+                    config_dict = config.to_dict()
+                else:
+                    config_dict = config or {}
+
                 modem_data = {
                     "port": info.port,
                     "type": info.type,
                     "version": info.version,
                     "sn": info.serial_number,
-                    "config": info.config or {}
+                    "config": config_dict,
+                    "config_dto": config if hasattr(config, 'to_dict') else None
                 }
                 modems.append(modem_data)
 
@@ -48,24 +57,28 @@ class ModemEditor:
         return modems
 
     @staticmethod
-    def show_parameters(config: Dict, modem_type: str) -> None:
+    def show_parameters(config: Union[TXConfig, RXConfig, Dict], modem_type: str) -> None:
         """Показать нумерованный список параметров с текущими значениями"""
         print("\n" + "-" * 60)
         print(f"   ТЕКУЩИЕ ПАРАМЕТРЫ ({modem_type})")
         print("-" * 60)
 
-        # Получаем список ключей из JSON
-        from core.modem.profile_loader import ProfileLoader
-        if modem_type == "TX":
-            default_config = ProfileLoader.get_tx_config()
+        # Если config — DTO, преобразуем в словарь для отображения
+        if isinstance(config, (TXConfig, RXConfig)):
+            config_dict = config.to_dict()
         else:
-            default_config = ProfileLoader.get_rx_config()
+            config_dict = config
+
+        # Получаем список ключей из JSON
+        if modem_type == "TX":
+            default_config = ProfileLoader.get_tx_dict()
+        else:
+            default_config = ProfileLoader.get_rx_dict()
 
         display_params = list(default_config.keys()) if default_config else []
 
         idx = 1
         for param_name in display_params:
-            # Пропускаем служебные
             if param_name in ["version", "sn"]:
                 continue
 
@@ -73,11 +86,10 @@ class ModemEditor:
             if not param_def:
                 continue
 
-            # Если параметра нет в config — пропускаем (не показываем)
-            if param_name not in config:
+            if param_name not in config_dict:
                 continue
 
-            current = config[param_name]
+            current = config_dict[param_name]
             options_str = ModemParameters.format_options(param_name)
 
             if param_name == "invert":
@@ -109,7 +121,7 @@ class ModemEditor:
                 print("   ❌ Введите число")
 
     @staticmethod
-    def edit_modem(port: str, config: Dict, modem_type: str) -> bool:
+    def edit_modem(port: str, config: Union[TXConfig, RXConfig, Dict], modem_type: str) -> bool:
         """Редактирование параметров модема"""
         controller = ModemController(port)
 
@@ -118,6 +130,14 @@ class ModemEditor:
             print(f"\n✅ Подключено к {port}")
 
             changed = False
+
+            # Если config — словарь, преобразуем в DTO
+            if isinstance(config, dict):
+                if modem_type == "TX":
+                    config = TXConfig.from_dict(config)
+                else:
+                    config = RXConfig.from_dict(config)
+
             params = ModemParameters.get_all_params(modem_type)
 
             while True:
@@ -143,7 +163,7 @@ class ModemEditor:
                 )
 
                 if new_value is not None:
-                    config[param_name] = new_value
+                    setattr(config, param_name, new_value)
                     changed = True
                     print(f"\n   ✅ Параметр {param_name} изменен на {new_value}")
 
@@ -167,10 +187,16 @@ class ModemEditor:
             controller: ModemController,
             param_name: str,
             param_def: ParamDef,
-            config: Dict
+            config: Union[TXConfig, RXConfig, Dict]
     ) -> Optional[Any]:
         """Редактировать один параметр"""
-        current = config.get(param_name, "не установлен")
+
+        # Получаем текущее значение
+        if isinstance(config, (TXConfig, RXConfig)):
+            current = getattr(config, param_name, "не установлен")
+        else:
+            current = config.get(param_name, "не установлен")
+
         command = param_def.command
 
         print(f"\n" + "=" * 50)
@@ -187,9 +213,12 @@ class ModemEditor:
                     success, response = controller.send_command("invert")
                     if success:
                         print("   ✅ Инверсия изменена")
+                        # Получаем новое значение
                         new_config = controller.get_config()
-                        if new_config:
-                            return new_config.get("inverted", current)
+                        if new_config and hasattr(new_config, 'to_dict'):
+                            return new_config.to_dict().get("inverted", not current)
+                        elif isinstance(new_config, dict):
+                            return new_config.get("inverted", not current)
                         return not current if isinstance(current, bool) else True
                     else:
                         print(f"   ❌ Ошибка: {response[:50] if response else 'нет ответа'}")
@@ -223,13 +252,20 @@ class ModemEditor:
 
             if success:
                 print("   ✅ Команда выполнена")
+                # Проверяем изменение
                 new_config = controller.get_config()
-                if new_config and new_config.get(param_name) == new_value:
-                    print(f"   ✅ Проверка пройдена: {param_name} = {new_value}")
-                    return new_value
-                else:
-                    print(f"   ⚠️ Не удалось подтвердить изменение")
-                    return new_value if new_config else None
+                if new_config:
+                    if hasattr(new_config, 'to_dict'):
+                        check_value = new_config.to_dict().get(param_name)
+                    else:
+                        check_value = new_config.get(param_name)
+                    if check_value == new_value:
+                        print(f"   ✅ Проверка пройдена: {param_name} = {new_value}")
+                        return new_value
+                    else:
+                        print(f"   ⚠️ Не удалось подтвердить изменение")
+                        return new_value
+                return new_value
             else:
                 print(f"   ❌ Ошибка: {response[:50] if response else 'нет ответа'}")
                 return None
@@ -257,12 +293,18 @@ class ModemEditor:
             if success:
                 print("   ✅ Команда выполнена")
                 new_config = controller.get_config()
-                if new_config and new_config.get(param_name) == new_value:
-                    print(f"   ✅ Проверка пройдена: {param_name} = {new_value}")
-                    return new_value
-                else:
-                    print(f"   ⚠️ Не удалось подтвердить изменение")
-                    return new_value if new_config else None
+                if new_config:
+                    if hasattr(new_config, 'to_dict'):
+                        check_value = new_config.to_dict().get(param_name)
+                    else:
+                        check_value = new_config.get(param_name)
+                    if check_value == new_value:
+                        print(f"   ✅ Проверка пройдена: {param_name} = {new_value}")
+                        return new_value
+                    else:
+                        print(f"   ⚠️ Не удалось подтвердить изменение")
+                        return new_value
+                return new_value
             else:
                 print(f"   ❌ Ошибка: {response[:50] if response else 'нет ответа'}")
                 return None
@@ -496,11 +538,11 @@ class ModemEditor:
         print(f"\n📌 TX: {tx['port']}")
         print(f"📌 RX: {rx['port']}")
 
-        # Загружаем настройки из JSON-файлов
-        tx_config = ProfileLoader.get_tx_config()
-        rx_config = ProfileLoader.get_rx_config()
+        # Загружаем настройки из JSON-файлов (DTO)
+        tx_dto = ProfileLoader.get_tx_config()
+        rx_dto = ProfileLoader.get_rx_config()
 
-        if not tx_config or not rx_config:
+        if not tx_dto or not rx_dto:
             print("\n❌ Не удалось загрузить настройки по умолчанию")
             print("   Проверьте наличие файлов:")
             print("      - config/salangan_tx_default.json")
@@ -513,11 +555,11 @@ class ModemEditor:
         print("-" * 60)
 
         print("\n   TX:")
-        for key, value in tx_config.items():
+        for key, value in tx_dto.to_dict().items():
             print(f"      {key}: {value}")
 
         print("\n   RX:")
-        for key, value in rx_config.items():
+        for key, value in rx_dto.to_dict().items():
             print(f"      {key}: {value}")
 
         print("\n" + "-" * 60)
@@ -532,8 +574,8 @@ class ModemEditor:
         print("   ПРИМЕНЕНИЕ НАСТРОЕК...")
         print("=" * 60)
 
-        success_tx = ModemEditor._apply_config_to_modem(tx['port'], tx_config, "TX")
-        success_rx = ModemEditor._apply_config_to_modem(rx['port'], rx_config, "RX")
+        success_tx = ModemEditor._apply_config_to_modem(tx['port'], tx_dto, "TX")
+        success_rx = ModemEditor._apply_config_to_modem(rx['port'], rx_dto, "RX")
 
         print("\n" + "=" * 60)
         if success_tx and success_rx:
@@ -549,7 +591,7 @@ class ModemEditor:
         input("\nНажмите Enter для продолжения...")
 
     @staticmethod
-    def _apply_config_to_modem(port: str, config: Dict, modem_type: str) -> bool:
+    def _apply_config_to_modem(port: str, config: Union[TXConfig, RXConfig], modem_type: str) -> bool:
         """Применить конфигурацию к модему и проверить результат"""
         controller = ModemController(port)
 
@@ -557,56 +599,33 @@ class ModemEditor:
             controller.connect()
             print(f"\n✅ Подключено к {port} ({modem_type})")
 
-            param_map = {
-                'freq': 'freq', 'code': 'code', 'fhss': 'fhss', 'dsss': 'dsss',
-                'rate': 'rate', 'attenuation': 'attenuation', 'address': 'address',
-                'pan': 'pan', 'baudrate': 'baudrate', 'parity': 'parity',
-                'stopbits': 'stopbits', 'mode': 'mode', 'protocol': 'protocol',
-                'timeslot': 'timeslot', 'trim': 'trim', 'invert': 'invert',
-                'led': 'led', 'max_clients': 'max_clients',
-                'extmode': 'extmode', 'extpinmode0': 'extpinmode0',
-                'extpindep0': 'extpindep0', 'extpinmode1': 'extpinmode1',
-                'extpindep1': 'extpindep1'
-            }
+            # Применяем конфигурацию
+            results = controller.apply_config(config)
+            all_ok = all(success for success, _ in results.values() if isinstance(success, bool))
 
-            if modem_type == "TX":
-                param_map['ack'] = 'ack'
-                param_map['ttl'] = 'ttl'
-            else:
-                param_map['bind'] = 'bind'
-                param_map['ewtests'] = 'ewtests'
-
-            # Формируем команды
-            commands = []
-            for key, value in config.items():
-                if key in param_map:
-                    cmd = param_map[key]
-                    if isinstance(value, bool):
-                        if value:
-                            commands.append(cmd)
-                    else:
-                        commands.append(f"{cmd} {value}")
-
-            # Отправляем команды
-            success_count = 0
-            for cmd in commands:
-                print(f"   → {cmd}")
-                success, response = controller.send_command(cmd)
-                if success:
-                    success_count += 1
-                else:
-                    print(f"      ❌ Ошибка: {response[:50] if response else 'нет ответа'}")
+            if not all_ok:
+                print(f"   ❌ Ошибка при применении настроек")
+                for cmd, (success, response) in results.items():
+                    if not success and cmd != "connection_check":
+                        print(f"      ❌ {cmd}: {response[:50] if response else 'нет ответа'}")
+                return False
 
             # Проверяем, что настройки применились
             print("\n   Проверка применённых настроек...")
             new_config = controller.get_config()
+
             if not new_config:
                 print(f"   ⚠️ Не удалось проверить конфигурацию")
                 return False
 
+            # Преобразуем в словарь для сравнения
+            if hasattr(new_config, 'to_dict'):
+                new_dict = new_config.to_dict()
+            else:
+                new_dict = new_config
+
             # Ключевые параметры для проверки
-            key_params = ["freq", "code", "fhss", "dsss", "rate", "attenuation", "address", "pan", "baudrate", "mode",
-                          "protocol"]
+            key_params = ["freq", "code", "fhss", "dsss", "rate", "attenuation", "address", "pan", "baudrate", "mode", "protocol"]
 
             if modem_type == "TX":
                 key_params.extend(["ack", "ttl"])
@@ -615,34 +634,22 @@ class ModemEditor:
 
             all_match = True
             for key in key_params:
-                if key in config:
-                    expected = config[key]
-                    actual = new_config.get(key)
-                    if expected != actual:
-                        print(f"      ❌ {key}: ожидалось {expected}, получено {actual}")
-                        all_match = False
-                    else:
-                        print(f"      ✅ {key}: {expected}")
+                expected = getattr(config, key, None)
+                actual = new_dict.get(key)
+                if expected != actual:
+                    print(f"      ❌ {key}: ожидалось {expected}, получено {actual}")
+                    all_match = False
+                else:
+                    print(f"      ✅ {key}: {expected}")
 
-            # Особый случай: inverted (toggle)
-            if "inverted" in config:
-                expected = config["inverted"]
-                actual = new_config.get("inverted", False)
+            if "inverted" in config.to_dict():
+                expected = config.inverted
+                actual = new_dict.get("inverted", False)
                 if expected != actual:
                     print(f"      ❌ inverted: ожидалось {expected}, получено {actual}")
                     all_match = False
                 else:
                     print(f"      ✅ inverted: {expected}")
-
-            # Особый случай: led
-            if "led" in config:
-                expected = config["led"]
-                actual = new_config.get("led")
-                if expected != actual:
-                    print(f"      ❌ led: ожидалось {expected}, получено {actual}")
-                    all_match = False
-                else:
-                    print(f"      ✅ led: {expected}")
 
             if all_match:
                 print(f"\n   ✅ Все параметры проверены и совпадают")

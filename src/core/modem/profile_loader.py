@@ -4,7 +4,9 @@
 
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional, List
+
+from core.dto import TXConfig, RXConfig
 
 
 class ProfileLoader:
@@ -12,106 +14,150 @@ class ProfileLoader:
     Загрузчик профилей из JSON-файлов
     """
 
-    # Получаем путь к корню проекта (src/)
-    import os
-    TX_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config",
-                                   "salangan_tx_default.json")
-    RX_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config",
-                                   "salangan_rx_default.json")
+    TX_DEFAULT_PATH = Path(__file__).parent.parent.parent / "config" / "salangan_tx_default.json"
+    RX_DEFAULT_PATH = Path(__file__).parent.parent.parent / "config" / "salangan_rx_default.json"
 
     @staticmethod
     def load_tx_default() -> Dict:
-        """Загрузить профиль TX по умолчанию"""
-        path = Path(ProfileLoader.TX_DEFAULT_PATH)
+        """Загрузить сырой JSON TX"""
+        path = ProfileLoader.TX_DEFAULT_PATH
         if not path.exists():
-            print(f"⚠️ Файл {ProfileLoader.TX_DEFAULT_PATH} не найден")
+            print(f"⚠️ Файл {path} не найден")
             return {}
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
 
     @staticmethod
     def load_rx_default() -> Dict:
-        """Загрузить профиль RX по умолчанию"""
-        path = Path(ProfileLoader.RX_DEFAULT_PATH)
+        """Загрузить сырой JSON RX"""
+        path = ProfileLoader.RX_DEFAULT_PATH
         if not path.exists():
-            print(f"⚠️ Файл {ProfileLoader.RX_DEFAULT_PATH} не найден")
+            print(f"⚠️ Файл {path} не найден")
             return {}
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
 
     @staticmethod
-    def get_tx_config() -> Dict:
-        """Получить конфигурацию TX из JSON"""
+    def get_tx_config() -> TXConfig:
+        """Получить TX конфигурацию в виде DTO"""
         data = ProfileLoader.load_tx_default()
         if not data:
-            return {}
-
-        config = {}
-
-        # General
-        if "General" in data:
-            if "protocol" in data["General"]:
-                config["protocol"] = data["General"]["protocol"]
-            if "led" in data["General"]:
-                config["led"] = data["General"]["led"]
-
-        # Radio (все ключи)
-        if "Radio" in data:
-            for key in ["mode", "rate", "timeslot", "ttl", "ack", "max_clients",
-                        "freq", "code", "attenuation", "address", "pan", "trim", "fhss", "dsss"]:
-                if key in data["Radio"]:
-                    config[key] = data["Radio"][key]
-
-        # Serial
-        if "Serial" in data:
-            for key in ["baudrate", "parity", "stopbits", "inverted"]:
-                if key in data["Serial"]:
-                    config[key] = data["Serial"][key]
-
-        # ExternalInterface
-        if "ExternalInterface" in data:
-            for key in ["pin_0_mode", "pin_0_dependency"]:
-                if key in data["ExternalInterface"]:
-                    config[key] = data["ExternalInterface"][key]
-
-        return config
+            return TXConfig()  # Возвращаем DTO со значениями по умолчанию
+        return TXConfig.from_json(data)
 
     @staticmethod
-    def get_rx_config() -> Dict:
-        """Получить конфигурацию RX из JSON"""
+    def get_rx_config() -> RXConfig:
+        """Получить RX конфигурацию в виде DTO"""
         data = ProfileLoader.load_rx_default()
         if not data:
-            return {}
+            return RXConfig()  # Возвращаем DTO со значениями по умолчанию
+        return RXConfig.from_json(data)
 
-        config = {}
+    @staticmethod
+    def get_tx_dict() -> Dict:
+        """
+        Получить TX конфигурацию в виде плоского словаря
+        (для обратной совместимости)
+        """
+        return ProfileLoader.get_tx_config().to_dict()
 
-        # General
-        if "General" in data:
-            if "protocol" in data["General"]:
-                config["protocol"] = data["General"]["protocol"]
-            if "led" in data["General"]:
-                config["led"] = data["General"]["led"]
+    @staticmethod
+    def get_rx_dict() -> Dict:
+        """
+        Получить RX конфигурацию в виде плоского словаря
+        (для обратной совместимости)
+        """
+        return ProfileLoader.get_rx_config().to_dict()
 
-        # Radio
-        if "Radio" in data:
-            radio = data["Radio"]
-            for key in ["mode", "rate", "freq", "code", "attenuation",
-                        "address", "pan", "bind", "trim", "fhss", "dsss", "ewtests"]:
-                if key in radio:
-                    config[key] = radio[key]
+    @staticmethod
+    def list_names() -> List[str]:
+        """Список доступных профилей"""
+        return ["tx_default", "rx_default"]
 
-        # Serial
-        if "Serial" in data:
-            serial = data["Serial"]
-            for key in ["baudrate", "parity", "stopbits", "inverted"]:
-                if key in serial:
-                    config[key] = serial[key]
+    @staticmethod
+    def save_tx_config(config: TXConfig, path: Optional[Path] = None) -> None:
+        """Сохранить TX конфигурацию в JSON"""
+        if path is None:
+            path = ProfileLoader.TX_DEFAULT_PATH
 
-        # ExternalInterface
-        if "ExternalInterface" in data:
-            ext = data["ExternalInterface"]
-            for key in ["mode", "pin_0_mode", "pin_0_dependency", "pin_1_mode", "pin_1_dependency"]:
-                if key in ext:
-                    config[key] = ext[key]
+        # Преобразуем DTO в структуру JSON
+        data = {
+            "General": {
+                "protocol": config.protocol,
+                "led": config.led,
+            },
+            "Radio": {
+                "mode": config.mode,
+                "rate": config.rate,
+                "freq": config.freq,
+                "code": config.code,
+                "attenuation": config.attenuation,
+                "address": config.address,
+                "pan": config.pan,
+                "trim": config.trim,
+                "fhss": config.fhss,
+                "dsss": config.dsss,
+                "timeslot": config.timeslot,
+                "ttl": config.ttl,
+                "ack": config.ack,
+                "max_clients": config.max_clients,
+            },
+            "Serial": {
+                "baudrate": config.baudrate,
+                "parity": config.parity,
+                "stopbits": config.stopbits,
+                "inverted": config.inverted,
+            },
+            "ExternalInterface": {
+                "pin_0_mode": config.pin_0_mode,
+                "pin_0_dependency": config.pin_0_dependency,
+            }
+        }
 
-        return config
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+    @staticmethod
+    def save_rx_config(config: RXConfig, path: Optional[Path] = None) -> None:
+        """Сохранить RX конфигурацию в JSON"""
+        if path is None:
+            path = ProfileLoader.RX_DEFAULT_PATH
+
+        data = {
+            "General": {
+                "protocol": config.protocol,
+                "led": config.led,
+            },
+            "Radio": {
+                "mode": config.mode,
+                "rate": config.rate,
+                "freq": config.freq,
+                "code": config.code,
+                "attenuation": config.attenuation,
+                "address": config.address,
+                "pan": config.pan,
+                "trim": config.trim,
+                "fhss": config.fhss,
+                "dsss": config.dsss,
+                "bind": config.bind,
+                "ewtests": config.ewtests,
+            },
+            "Serial": {
+                "baudrate": config.baudrate,
+                "parity": config.parity,
+                "stopbits": config.stopbits,
+                "inverted": config.inverted,
+            },
+            "ExternalInterface": {
+                "mode": config.extmode,
+                "pin_0_mode": config.pin_0_mode,
+                "pin_0_dependency": config.pin_0_dependency,
+                "pin_1_mode": config.pin_1_mode,
+                "pin_1_dependency": config.pin_1_dependency,
+            }
+        }
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
