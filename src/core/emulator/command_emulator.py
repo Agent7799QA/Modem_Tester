@@ -1,6 +1,7 @@
 from PySide6.QtCore import QThread, Signal
-from crsf_parser.payloads import PacketsTypes
+
 from crsf_parser.handling import crsf_build_frame
+from crsf_parser.payloads import PacketsTypes
 
 
 class CommandEmulator(QThread):

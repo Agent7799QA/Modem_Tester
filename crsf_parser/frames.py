@@ -1,4 +1,5 @@
 from construct import Byte, If, Struct, Const, Int8ub, Switch, Tell, this, Array, Select
+
 from .payloads import (
     PacketsTypes,
     payload_battery_sensor,

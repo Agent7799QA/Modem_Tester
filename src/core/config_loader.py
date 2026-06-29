@@ -3,8 +3,8 @@
 """
 
 import json
-from typing import Dict, Optional, Any
 from pathlib import Path
+from typing import Dict, Any
 
 
 class ConfigLoader:

@@ -2,21 +2,24 @@
 Реализация управления модемом Салангана-К3
 """
 
-import serial
-import time
 import logging
+import time
 from typing import Dict, Tuple, Optional
+
+import serial
+
+from .config import ReconnectConfig
 from .exceptions import (
     ModemConnectionError,
     ModemCommandError,
     ModemNotConnectedError
 )
 from .interfaces import IModemController
-from .config import ReconnectConfig
 from .parameters import ModemParameters
 
 # Настройка логгера для отладки
 logger = logging.getLogger(__name__)
+
 
 class ModemController(IModemController):
     """
@@ -98,7 +101,8 @@ class ModemController(IModemController):
         self.disconnect()
 
         for attempt in range(self.reconnect_config.attempts):
-            delay = self.reconnect_config.delays[attempt] if attempt < len(self.reconnect_config.delays) else 2.0 ** attempt
+            delay = self.reconnect_config.delays[attempt] if attempt < len(
+                self.reconnect_config.delays) else 2.0 ** attempt
             print(f"⚠️ Попытка переподключения {attempt + 1}/{self.reconnect_config.attempts} (ждем {delay:.1f}с)...")
             time.sleep(delay)
 

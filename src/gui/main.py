@@ -1,15 +1,17 @@
-from platform_gui import ChooseGui
 import re
 import sys
-# import serial.tools.list_ports
-from PySide6.QtWidgets import QApplication, QMainWindow
+
 from PySide6.QtCore import QTimer, Signal, QTime
-from PySide6.QtGui import QIntValidator 
-from port_monitor import PortMonitorThread
-from core.parser.rx_parser import RxParsingThread
-from stat_collector import Statistic_Collector
+from PySide6.QtGui import QIntValidator
+from PySide6.QtWidgets import QApplication, QMainWindow
+
 from core.emulator.command_emulator import CommandEmulator
-from ui.styles import *
+from core.parser.rx_parser import RxParsingThread
+from gui.styles import *
+from gui.widgets.port_monitor import PortMonitorThread
+from gui.widgets.stat_collector import Statistic_Collector
+from platform_gui import ChooseGui
+
 GUI = ChooseGui()
 
 
@@ -39,7 +41,7 @@ class Window(QMainWindow):
         self.rx_parsing_thread = RxParsingThread()
 
         # status
-        self.rx_parsing_thread.serial_status.connect(self.rx_serial_status)        
+        self.rx_parsing_thread.serial_status.connect(self.rx_serial_status)
 
         # data
         self.rx_parsing_thread.rx_data_parsed.connect(self.rx_data)
@@ -56,11 +58,14 @@ class Window(QMainWindow):
 
         # LineEditValidation
         # TODO: FIXME:
-        line_edit_validation_list = [ self.ui.ch1_lineEdit, self.ui.ch2_lineEdit, self.ui.ch3_lineEdit, self.ui.ch4_lineEdit, self.ui.ch5_lineEdit,
-                                      self.ui.ch6_lineEdit,self.ui.ch7_lineEdit, self.ui.ch8_lineEdit, self.ui.ch9_lineEdit, self.ui.ch10_lineEdit,
-                                      self.ui.ch11_lineEdit,self.ui.ch12_lineEdit, self.ui.ch13_lineEdit, self.ui.ch14_lineEdit, self.ui.ch15_lineEdit,
-                                      self.ui.ch16_lineEdit ]
-        
+        line_edit_validation_list = [self.ui.ch1_lineEdit, self.ui.ch2_lineEdit, self.ui.ch3_lineEdit,
+                                     self.ui.ch4_lineEdit, self.ui.ch5_lineEdit,
+                                     self.ui.ch6_lineEdit, self.ui.ch7_lineEdit, self.ui.ch8_lineEdit,
+                                     self.ui.ch9_lineEdit, self.ui.ch10_lineEdit,
+                                     self.ui.ch11_lineEdit, self.ui.ch12_lineEdit, self.ui.ch13_lineEdit,
+                                     self.ui.ch14_lineEdit, self.ui.ch15_lineEdit,
+                                     self.ui.ch16_lineEdit]
+
         for le in line_edit_validation_list:
             le.setValidator(QIntValidator(0, 2047, le))
             le.textChanged.connect(lambda text, le=le: self.update_channel_lineEdit_status(le, text))
@@ -69,7 +74,7 @@ class Window(QMainWindow):
         rate.setValidator(QIntValidator(0, 50, self.ui.rate_lineEdit))
         rate.textChanged.connect(lambda text, rate=rate: self.update_rate_lineEdit_status(rate, text))
 
-# TX and RX prots activities
+    # TX and RX prots activities
     def update_rx_ports(self, com_ports) -> None:
         none_port = "None"
 
@@ -83,31 +88,29 @@ class Window(QMainWindow):
                 self.ui.rx_comports.addItem(port)
         self.rx_saved_port()
 
-
     def rx_saved_port(self) -> None:
         current_text = self.ui.rx_comports.currentText()
-        
+
         if current_text != "None" and current_text != "":
             if self.saved_rx_port != current_text:
                 self.saved_rx_port = current_text
-                
-        else: 
+
+        else:
             index = self.ui.rx_comports.findText(self.saved_rx_port)
             self.ui.rx_comports.setCurrentIndex(index)
             if self.saved_rx_port != "None" or "":
                 self.rx_parsing_thread.set_port(self.saved_rx_port)
 
-
     def on_rx_port_changed(self) -> None:
         self.rx_saved_port()
 
-#DATA AND STATUSES         
+    # DATA AND STATUSES
     def rx_serial_status(self, status) -> None:
 
         style = serial_indicator_styles.get(status, "_default")
 
         self.ui.rx_serial_indicator.setStyleSheet(
-        form_of_indicator + style
+            form_of_indicator + style
         )
         if status == "bad":
             self.ui.rx_link_lcd.display("-")
@@ -119,10 +122,11 @@ class Window(QMainWindow):
             self.ui.rx_link_indicator.setStyleSheet(form_of_indicator + style)
             self.tx_lq_status = "bad"
             style = link_indicator_styles.get(self.tx_lq_status, "_default")
-            self.ui.tx_link_indicator.setStyleSheet(form_of_indicator + style) 
-            
-#END
-#PARSED DATA
+            self.ui.tx_link_indicator.setStyleSheet(form_of_indicator + style)
+
+        # END
+
+    # PARSED DATA
     def rx_data(self, data):
         downlink_link_quality = None
         downlink_rssi = None
@@ -132,7 +136,7 @@ class Window(QMainWindow):
         for match in matches:
             field, value = match
             value = int(value.strip())
-            
+
             if field == 'downlink_link_quality':
                 downlink_link_quality = value
             elif field == 'downlink_rssi':
@@ -151,7 +155,7 @@ class Window(QMainWindow):
         style = link_indicator_styles.get(self.rx_lq_status, "_default")
 
         self.ui.rx_link_indicator.setStyleSheet(
-        form_of_indicator + style
+            form_of_indicator + style
         )
         if downlink_link_quality == 0:
             self.ui.rx_link_lcd.display("-")
@@ -162,9 +166,8 @@ class Window(QMainWindow):
         style = link_indicator_styles.get(self.tx_lq_status, "_default")
 
         self.ui.tx_link_indicator.setStyleSheet(
-            form_of_indicator+ style
-        )     
-
+            form_of_indicator + style
+        )
 
     def tx_data(self, data):
         uplink_link_quality = None
@@ -176,7 +179,7 @@ class Window(QMainWindow):
         for match in matches:
             field, value = match
             value = int(value.strip())
-            
+
             if field == 'uplink_link_quality':
                 uplink_link_quality = value
             elif field == 'uplink_rssi_ant_1':
@@ -200,12 +203,13 @@ class Window(QMainWindow):
         style = link_indicator_styles.get(self.tx_lq_status, "_default")
 
         self.ui.tx_link_indicator.setStyleSheet(
-            form_of_indicator+ style
-        )   
-#END
-        
-#Statistics Collector
-    def rx_stat(self, data:dict=None):
+            form_of_indicator + style
+        )
+
+    # END
+
+    # Statistics Collector
+    def rx_stat(self, data: dict = None):
         if data is not None:
             # data
             downlink_rssi_min = data.get('downlink_rssi', {}).get('max')
@@ -223,7 +227,7 @@ class Window(QMainWindow):
             self.ui.rx_min_lq_lcd.display("-")
             self.ui.rx_max_lq_lcd.display("-")
 
-    def tx_stat(self, data:dict):
+    def tx_stat(self, data: dict):
         if data is not None:
             uplink_rssi_min = data.get('uplink_rssi_ant_1', {}).get('max')
             uplink_rssi_max = data.get('uplink_rssi_ant_1', {}).get('min')
@@ -239,12 +243,13 @@ class Window(QMainWindow):
             self.ui.tx_max_rssi_lcd.display("-")
             self.ui.tx_min_lq_lcd.display("-")
             self.ui.tx_max_lq_lcd.display("-")
-#end
+
+    # end
     def start_stat_collecting(self) -> int:
         self.statistic_collector_thread = Statistic_Collector()
         if not self.statistic_collector_thread.isRunning():
-            self.statistic_collector_thread.stat_updated.connect(self.rx_stat) 
-            self.statistic_collector_thread.stat_updated.connect(self.tx_stat) 
+            self.statistic_collector_thread.stat_updated.connect(self.rx_stat)
+            self.statistic_collector_thread.stat_updated.connect(self.tx_stat)
 
             self.ui.clear_coll_btn.clicked.connect(self.reset_collection)
             self.rx_parsing_thread.rx_data_parsed.connect(self.statistic_collector_thread.data_parsed)
@@ -259,7 +264,7 @@ class Window(QMainWindow):
             return 0
         else:
             return -1
-        
+
     def reset_collection(self):
         self.elapsed_time = QTime(0, 0, 0)
         self.ui.timer_lcd.display(self.elapsed_time.toString("hh:mm:ss"))
@@ -279,16 +284,16 @@ class Window(QMainWindow):
         if rate != '':
             self.command_emulator.start_emulation.emit(command, int(rate))
             self.ui.start_emulation.setText("Stop Emulation")
-            # self.ui.start_emulation.disconnect()
-            # self.ui.start_emulation.clicked.connect(self.stop_emulation)
+            # self.gui.start_emulation.disconnect()
+            # self.gui.start_emulation.clicked.connect(self.stop_emulation)
         else:
             return -1
-        
+
     def stop_emulation(self):
         self.rx_parsing_thread.stop_writing()
         self.ui.start_emulation.setText("Emulate")
-        # self.ui.start_emulation.disconnect()
-        # self.ui.start_emulation.clicked.connect(self.start_command_emulation)
+        # self.gui.start_emulation.disconnect()
+        # self.gui.start_emulation.clicked.connect(self.start_command_emulation)
 
     def get_command(self) -> list:
         """
@@ -312,9 +317,10 @@ class Window(QMainWindow):
             command_list.append(self.ui.ch14_lineEdit.text())
             command_list.append(self.ui.ch15_lineEdit.text())
             command_list.append(self.ui.ch16_lineEdit.text())
-        except: ValueError
+        except:
+            ValueError
         return command_list
-    
+
     def update_channel_lineEdit_status(self, line_edit, text):
         """Обновление статуса для конкретного LineEdit"""
         # TODO: check  stats valid
@@ -367,7 +373,6 @@ class Window(QMainWindow):
                 print("Timeout occurred while waiting for rx_thread to stop")
                 return -1
 
-
     def stop_monitoring(self) -> int:
 
         if self.port_monitor.isRunning():
@@ -380,7 +385,7 @@ class Window(QMainWindow):
             except self.port_monitor.TimeoutError:
                 print("Timeout occurred while waiting for thread to stop")
                 return -1
-            
+
     def stop_stat_collecting(self) -> int:
 
         if self.statistic_collector_thread.isRunning():
@@ -393,7 +398,7 @@ class Window(QMainWindow):
             except self.statistic_collector_thread.TimeoutError:
                 print("Timeout occurred while waiting for thread to stop")
                 return -1
-            
+
     def stop_command_emulator(self) -> int:
         self.command_emulator.running = False
         self.command_emulator.stop()
@@ -404,7 +409,7 @@ class Window(QMainWindow):
         except self.command_emulator.TimeoutError:
             print("Timeout occurred while waiting for thread to stop")
             return -1
-        
+
     def update_time(self):
         self.elapsed_time = self.elapsed_time.addSecs(1)
         self.ui.timer_lcd.display(self.elapsed_time.toString("hh:mm:ss"))
@@ -415,7 +420,7 @@ class Window(QMainWindow):
     def on_crsf_parsing_stopped(self) -> None:
         print("Parsing thread has been stopped")
 
-    def on_stat_collector_stopped(self) ->None:
+    def on_stat_collector_stopped(self) -> None:
         print("Stat Collector thread has been stopped")
 
     def on_emulator_stopped(self) -> None:

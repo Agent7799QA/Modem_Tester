@@ -2,8 +2,8 @@
 Тестирование работы с профилями
 """
 
+from cli.profiles import Profiles
 from core.modem.controller import ModemController
-from tests.profiles import Profiles
 from core.modem.exceptions import ModemConnectionError
 
 
@@ -97,6 +97,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-

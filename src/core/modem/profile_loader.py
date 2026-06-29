@@ -4,13 +4,13 @@
 
 import json
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict
+
 
 class ProfileLoader:
     """
     Загрузчик профилей из JSON-файлов
     """
-
 
     # Получаем путь к корню проекта (src/)
     import os
@@ -18,7 +18,6 @@ class ProfileLoader:
                                    "salangan_tx_default.json")
     RX_DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config",
                                    "salangan_rx_default.json")
-
 
     @staticmethod
     def load_tx_default() -> Dict:

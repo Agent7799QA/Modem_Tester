@@ -1,6 +1,7 @@
-from PySide6.QtCore import QThread, Signal, QWaitCondition, QMutex, QTimer
-import serial.tools.list_ports
 import platform
+
+import serial.tools.list_ports
+from PySide6.QtCore import QThread, Signal, QWaitCondition, QMutex, QTimer
 
 
 class BaseParsingThread(QThread):
@@ -56,7 +57,7 @@ class BaseParsingThread(QThread):
             all_bad = "bad"
             self.serial_status.emit(all_bad)
             return None
-        
+
     def start_writing(self, command: bytes, frequency_hz: int = 1):
         """Начинает запись команды с указанной частотой"""
 
@@ -67,11 +68,11 @@ class BaseParsingThread(QThread):
         self.current_command = command
         self.write_interval = int(1000 / frequency_hz)
         self.is_writing = True
-        
+
         if self.write_timer.isActive():
             self.write_timer.stop()
-            
-        self.write_timer.start(self.write_interval)        
+
+        self.write_timer.start(self.write_interval)
         self.write_data()
 
     def stop_writing(self):
@@ -84,7 +85,7 @@ class BaseParsingThread(QThread):
         """Записывает данные в порт"""
         if not self.is_writing or not self.current_command or not self.serial_port.is_open:
             return
-            
+
         try:
             if self.serial_port.is_open:
                 self.serial_port.write(self.current_command)
@@ -94,7 +95,7 @@ class BaseParsingThread(QThread):
             self.serial_status.emit("write_error")
 
     def check_os_baudrate(self):
-        try:            
+        try:
             if platform.system() == "Windows":
                 self.baudrate = 420000
             elif platform.system() == "Darwin":
@@ -108,10 +109,9 @@ class BaseParsingThread(QThread):
 
     def stop(self) -> None:
         self.running = False
-        self.port_set_condition.notify_all() 
+        self.port_set_condition.notify_all()
         self.stopped.emit()
         if self.serial_port:
             self.serial_port.close()
         self.quit()
         self.wait()
-

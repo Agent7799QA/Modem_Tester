@@ -74,7 +74,6 @@ PAYLOADS_SIZE: "dict[int, int]" = {
     PacketsTypes.ARDUPILOT_RESP: 0,
 }
 
-
 # GPS packet structure
 payload_gps = Struct(
     "origin_device_address" / Int8ub,
@@ -113,24 +112,24 @@ payload_heartbeat = Struct("origin_device_address" / Int8ub)
 # Video transmitter packet structure
 payload_vtx = Struct(
     "origin_device_address" / Int8ub,
-    "band" / Enum(Int8ub, 
-                 RACE_BAND=0,
-                 BAND_A=1,
-                 BAND_B=2,
-                 BAND_E=3,
-                 BAND_F=4,
-                 BAND_D=5),
+    "band" / Enum(Int8ub,
+                  RACE_BAND=0,
+                  BAND_A=1,
+                  BAND_B=2,
+                  BAND_E=3,
+                  BAND_F=4,
+                  BAND_D=5),
     "channel" / Int8ub,  # 1-8
     "power" / Enum(Int8ub,
-                  POWER_0_MW=0,
-                  POWER_1_MW=1,
-                  POWER_2_MW=2,
-                  POWER_10_MW=3,
-                  POWER_25_MW=4,
-                  POWER_100_MW=5,
-                  POWER_200_MW=6,
-                  POWER_500_MW=7,
-                  POWER_1000_MW=8),
+                   POWER_0_MW=0,
+                   POWER_1_MW=1,
+                   POWER_2_MW=2,
+                   POWER_10_MW=3,
+                   POWER_25_MW=4,
+                   POWER_100_MW=5,
+                   POWER_200_MW=6,
+                   POWER_500_MW=7,
+                   POWER_1000_MW=8),
     "pitmode" / Enum(Int8ub, OFF=0, ON=1),
     "region" / Enum(Int8ub, INTERNATIONAL=0, USA=1),
 )
@@ -192,8 +191,8 @@ payload_subset_rc_channels_packed = ByteSwapped(
 # Attitude packet structure
 payload_attitude = Struct(
     "pitch" / Int16sb,  # degrees * 100
-    "roll" / Int16sb,   # degrees * 100
-    "yaw" / Int16sb,    # degrees * 100
+    "roll" / Int16sb,  # degrees * 100
+    "yaw" / Int16sb,  # degrees * 100
 )
 
 # Flight mode packet structure

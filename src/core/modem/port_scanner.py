@@ -3,22 +3,22 @@
 """
 
 import re
-import serial.tools.list_ports
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+import serial.tools.list_ports
+
 from core.modem.controller import ModemController
 from core.modem.exceptions import ModemConnectionError
-from core.modem.parameters import ModemParameters
 
 
 @dataclass
 class ModemInfo:
     """Информация о найденном модеме"""
-    port: str                          # COM-порт
-    type: str                          # "TX" или "RX"
+    port: str  # COM-порт
+    type: str  # "TX" или "RX"
     config: Dict = field(default_factory=dict)  # параметры из print
-    version: Optional[str] = None      # версия прошивки
+    version: Optional[str] = None  # версия прошивки
     serial_number: Optional[str] = None  # серийный номер
 
 
@@ -88,7 +88,7 @@ def _scan_port(port: str) -> Optional[ModemInfo]:
         version = _extract_version(response)
         serial_number = _extract_serial(response)
 
-       # 4. Читаем конфигурацию через get_config() с указанием типа
+        # 4. Читаем конфигурацию через get_config() с указанием типа
         config = controller.get_config(modem_type)
 
         controller.disconnect()

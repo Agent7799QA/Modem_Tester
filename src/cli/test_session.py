@@ -3,9 +3,11 @@
 """
 
 import time
-from core.session import ModemSession
-from core.modem.port_scanner import scan_ports, print_modems, find_tx_rx_from_modems
+
+from cli.profiles import Profiles
 from core.modem.exceptions import ModemConnectionError
+from core.modem.port_scanner import scan_ports, print_modems, find_tx_rx_from_modems
+from core.session import ModemSession
 
 
 def test_session():
@@ -62,7 +64,7 @@ def test_session():
 
         try:
             for i in range(10):
-                print(f"  [{i+1}/10] Сбор данных...")
+                print(f"  [{i + 1}/10] Сбор данных...")
                 time.sleep(1)
         except KeyboardInterrupt:
             print("\n   ⚠️ Прервано пользователем")

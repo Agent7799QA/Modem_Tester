@@ -4,6 +4,7 @@
 """
 
 from typing import Dict, Optional, Tuple
+
 from core.modem.controller import ModemController
 from core.modem.exceptions import ModemConnectionError
 
@@ -22,10 +23,10 @@ class ModemSynchronizer:
 
     @staticmethod
     def sync_from_config(
-        tx_controller: ModemController,
-        rx_controller: ModemController,
-        tx_config: Dict,
-        rx_overrides: Optional[Dict] = None
+            tx_controller: ModemController,
+            rx_controller: ModemController,
+            tx_config: Dict,
+            rx_overrides: Optional[Dict] = None
     ) -> Tuple[bool, Dict]:
         """
         Синхронизировать модемы на основе конфигурации TX
@@ -135,9 +136,9 @@ class ModemSynchronizer:
 
     @staticmethod
     def sync_from_modem(
-        tx_controller: ModemController,
-        rx_controller: ModemController,
-        rx_overrides: Optional[Dict] = None
+            tx_controller: ModemController,
+            rx_controller: ModemController,
+            rx_overrides: Optional[Dict] = None
     ) -> Tuple[bool, Dict]:
         """
         Синхронизировать модемы: читать настройки с TX модема
@@ -219,10 +220,10 @@ class ModemSynchronizer:
 
     @staticmethod
     def _verify_sync(
-        tx_controller: ModemController,
-        rx_controller: ModemController,
-        tx_config: Dict,
-        rx_config: Dict
+            tx_controller: ModemController,
+            rx_controller: ModemController,
+            tx_config: Dict,
+            rx_config: Dict
     ) -> bool:
         """
         Проверить, что модемы синхронизированы

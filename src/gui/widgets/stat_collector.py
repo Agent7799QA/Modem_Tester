@@ -1,4 +1,5 @@
 import re
+
 from PySide6.QtCore import QThread, Signal, QMutex
 
 
@@ -46,7 +47,7 @@ class Statistic_Collector(QThread):
                     self.uplink_rssi_ant_1.append(value)
                 else:
                     print("SC: no matches in data\n")
-            
+
             self.get_min_max_values()
         finally:
             self.mutex.unlock()

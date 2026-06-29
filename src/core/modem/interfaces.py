@@ -3,7 +3,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List
 
 
 class IModemController(ABC):
@@ -52,8 +52,13 @@ class IModemController(ABC):
         pass
 
     @abstractmethod
-    def get_config(self) -> Dict:
+    def get_config(self, modem_type: str = "TX") -> Dict:
         """Получить текущую конфигурацию модема"""
+        pass
+
+    @abstractmethod
+    def stat(self) -> Dict:
+        """Получить телеметрию через команду stat"""
         pass
 
 

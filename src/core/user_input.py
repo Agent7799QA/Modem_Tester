@@ -3,10 +3,10 @@
 """
 
 import sys
+
 from core.modem.controller import ModemController
 from core.modem.exceptions import ModemConnectionError
 from core.user_input import get_port_from_user
-from core.tests.profiles import Profiles
 
 
 def test_profiles(com_port: str):

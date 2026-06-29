@@ -3,8 +3,8 @@
 """
 
 import re
-from typing import Dict, List, Union, Optional, Tuple
 from dataclasses import dataclass
+from typing import Dict, List, Union, Optional, Tuple
 
 
 @dataclass

@@ -1,23 +1,19 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'gui_07_win.ui'
+## Form generated from reading UI file 'gui_07_win.gui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QHBoxLayout,
-    QLCDNumber, QLabel, QLineEdit, QMainWindow,
-    QPushButton, QSizePolicy, QVBoxLayout, QWidget)
+from PySide6.QtCore import (QCoreApplication, QMetaObject, QRect,
+                            QSize, Qt)
+from PySide6.QtGui import (QFont)
+from PySide6.QtWidgets import (QComboBox, QFrame, QHBoxLayout,
+                               QLCDNumber, QLabel, QLineEdit, QPushButton, QSizePolicy, QVBoxLayout, QWidget)
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -70,7 +66,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.rx_lq_label)
 
-
         self.horizontalLayout.addLayout(self.verticalLayout)
 
         self.verticalLayout_2 = QVBoxLayout()
@@ -89,13 +84,13 @@ class Ui_MainWindow(object):
         font1.setPointSize(11)
         self.rx_serial_indicator.setFont(font1)
         self.rx_serial_indicator.setStyleSheet(u"border-radius: 50%;\n"
-"min-width: 34px;\n"
-"min-height: 34px;\n"
-"max-width: 34px;\n"
-"max-height: 34px;\n"
-"background-color: white;\n"
-"border: 1px solid black;\n"
-"")
+                                               "min-width: 34px;\n"
+                                               "min-height: 34px;\n"
+                                               "max-width: 34px;\n"
+                                               "max-height: 34px;\n"
+                                               "background-color: white;\n"
+                                               "border: 1px solid black;\n"
+                                               "")
 
         self.verticalLayout_2.addWidget(self.rx_serial_indicator)
 
@@ -104,13 +99,13 @@ class Ui_MainWindow(object):
         self.rx_link_indicator.setMinimumSize(QSize(36, 36))
         self.rx_link_indicator.setMaximumSize(QSize(36, 36))
         self.rx_link_indicator.setStyleSheet(u"border-radius: 50%;\n"
-"min-width: 34px;\n"
-"min-height: 34px;\n"
-"max-width: 34px;\n"
-"max-height: 34px;\n"
-"background-color: white;\n"
-"border: 1px solid black;\n"
-"")
+                                             "min-width: 34px;\n"
+                                             "min-height: 34px;\n"
+                                             "max-width: 34px;\n"
+                                             "max-height: 34px;\n"
+                                             "background-color: white;\n"
+                                             "border: 1px solid black;\n"
+                                             "")
 
         self.verticalLayout_2.addWidget(self.rx_link_indicator)
 
@@ -128,9 +123,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addWidget(self.rx_link_lcd)
 
-
         self.horizontalLayout.addLayout(self.verticalLayout_2)
-
 
         self.horizontalLayout_3.addLayout(self.horizontalLayout)
 
@@ -168,7 +161,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addWidget(self.tx_lq_label)
 
-
         self.horizontalLayout_2.addLayout(self.verticalLayout_3)
 
         self.verticalLayout_5 = QVBoxLayout()
@@ -188,13 +180,13 @@ class Ui_MainWindow(object):
         self.tx_link_indicator = QLabel(self.layoutWidget)
         self.tx_link_indicator.setObjectName(u"tx_link_indicator")
         self.tx_link_indicator.setStyleSheet(u"border-radius: 50%;\n"
-"min-width: 34px;\n"
-"min-height: 34px;\n"
-"max-width: 34px;\n"
-"max-height: 34px;\n"
-"background-color: white;\n"
-"border: 1px solid black;\n"
-"")
+                                             "min-width: 34px;\n"
+                                             "min-height: 34px;\n"
+                                             "max-width: 34px;\n"
+                                             "max-height: 34px;\n"
+                                             "background-color: white;\n"
+                                             "border: 1px solid black;\n"
+                                             "")
 
         self.verticalLayout_5.addWidget(self.tx_link_indicator)
 
@@ -212,9 +204,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_5.addWidget(self.tx_link_lcd)
 
-
         self.horizontalLayout_2.addLayout(self.verticalLayout_5)
-
 
         self.horizontalLayout_3.addLayout(self.horizontalLayout_2)
 
@@ -222,8 +212,8 @@ class Ui_MainWindow(object):
         self.Statistic_frame.setObjectName(u"Statistic_frame")
         self.Statistic_frame.setGeometry(QRect(0, 310, 991, 351))
         self.Statistic_frame.setStyleSheet(u"QFrame {\n"
-"    background-color: #eaf4fd;\n"
-"}")
+                                           "    background-color: #eaf4fd;\n"
+                                           "}")
         self.Statistic_frame.setFrameShape(QFrame.StyledPanel)
         self.Statistic_frame.setFrameShadow(QFrame.Raised)
         self.layoutWidget1 = QWidget(self.Statistic_frame)
@@ -260,7 +250,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_4.addWidget(self.rx_min_lq_label)
 
-
         self.horizontalLayout_4.addLayout(self.verticalLayout_4)
 
         self.verticalLayout_6 = QVBoxLayout()
@@ -293,9 +282,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_6.addWidget(self.rx_min_lq_lcd)
 
-
         self.horizontalLayout_4.addLayout(self.verticalLayout_6)
-
 
         self.horizontalLayout_6.addLayout(self.horizontalLayout_4)
 
@@ -326,7 +313,6 @@ class Ui_MainWindow(object):
         self.tx_min_lq_label.setFont(font)
 
         self.verticalLayout_7.addWidget(self.tx_min_lq_label)
-
 
         self.horizontalLayout_5.addLayout(self.verticalLayout_7)
 
@@ -360,9 +346,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_8.addWidget(self.tx_min_lq_lcd)
 
-
         self.horizontalLayout_5.addLayout(self.verticalLayout_8)
-
 
         self.horizontalLayout_6.addLayout(self.horizontalLayout_5)
 
@@ -382,7 +366,7 @@ class Ui_MainWindow(object):
         self.stat_coll_label.setMinimumSize(QSize(230, 51))
         self.stat_coll_label.setMaximumSize(QSize(230, 51))
         self.stat_coll_label.setFont(font)
-        self.stat_coll_label.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        self.stat_coll_label.setAlignment(Qt.AlignLeading | Qt.AlignLeft | Qt.AlignVCenter)
 
         self.horizontalLayout_10.addWidget(self.stat_coll_label)
 
@@ -414,7 +398,7 @@ class Ui_MainWindow(object):
         self.label.setMaximumSize(QSize(170, 51))
         self.label.setFont(font)
         self.label.setLayoutDirection(Qt.LeftToRight)
-        self.label.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.label.setAlignment(Qt.AlignRight | Qt.AlignTrailing | Qt.AlignVCenter)
 
         self.horizontalLayout_10.addWidget(self.label)
 
@@ -623,7 +607,6 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_8.addWidget(self.ch16_label)
 
-
         self.verticalLayout_9.addLayout(self.horizontalLayout_8)
 
         self.horizontalLayout_7 = QHBoxLayout()
@@ -806,7 +789,6 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_7.addWidget(self.ch16_lineEdit)
 
-
         self.verticalLayout_9.addLayout(self.horizontalLayout_7)
 
         self.layoutWidget4 = QWidget(self.frame)
@@ -848,6 +830,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
 
         QMetaObject.connectSlotsByName(MainWindow)
+
     # setupUi
 
     def retranslateUi(self, MainWindow):
@@ -901,4 +884,3 @@ class Ui_MainWindow(object):
         self.rate_lineEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Rate Hz", None))
         self.start_emulation.setText(QCoreApplication.translate("MainWindow", u"Emulate", None))
     # retranslateUi
-

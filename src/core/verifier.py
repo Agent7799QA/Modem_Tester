@@ -4,6 +4,7 @@
 """
 
 from typing import Dict, Tuple
+
 from core.modem.controller import ModemController
 from core.modem.exceptions import ModemConnectionError
 

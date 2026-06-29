@@ -2,13 +2,12 @@
 Сессия для работы с двумя модемами (TX и RX)
 """
 
-import time
-import re
+from typing import Optional, Dict
+
 import serial.tools.list_ports
-from typing import Optional, Dict, Tuple, List
-from core.modem.controller import ModemController
+
 from core.modem.config import ModemConfig
-from core.modem.exceptions import ModemConnectionError
+from core.modem.controller import ModemController
 from core.parser.rx_parser import RxParsingThread
 from core.parser.tx_parser import TxParsingThread
 

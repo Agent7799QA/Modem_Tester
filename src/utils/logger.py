@@ -3,7 +3,6 @@
 """
 
 from enum import Enum
-from typing import Optional
 
 
 class LogColor(Enum):

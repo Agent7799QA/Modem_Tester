@@ -2,15 +2,13 @@
 Интерактивный редактор параметров модема
 """
 
-
 from typing import Dict, List, Optional, Any
+
 from core.modem.controller import ModemController
-from core.modem.port_scanner import scan_ports, print_modems
 from core.modem.exceptions import ModemConnectionError
 from core.modem.parameters import ModemParameters, ParamDef
+from core.modem.port_scanner import scan_ports, print_modems
 from core.modem.profile_loader import ProfileLoader
-
-
 
 
 class ModemEditor:

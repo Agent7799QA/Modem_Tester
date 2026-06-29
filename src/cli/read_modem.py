@@ -28,9 +28,9 @@ def get_port_from_user():
     Returns:
         str: Имя выбранного порта или None
     """
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("   ПОИСК МОДЕМА САЛАНГАНА-К3")
-    print("="*50)
+    print("=" * 50)
 
     ports = list_available_ports()
 
@@ -43,7 +43,7 @@ def get_port_from_user():
     for i, port in enumerate(ports, 1):
         print(f"  {i}. {port}")
 
-    print("\n" + "-"*50)
+    print("\n" + "-" * 50)
     while True:
         try:
             choice = input("Выберите номер порта (или 'q' для выхода): ").strip()
@@ -73,9 +73,9 @@ def ask_full_output() -> bool:
     Returns:
         bool: True если полный вывод, False если краткий
     """
-    print("\n" + "-"*50)
+    print("\n" + "-" * 50)
     print("   ВЫБОР РЕЖИМА ВЫВОДА")
-    print("-"*50)
+    print("-" * 50)
     print("   1. Краткий вывод (только начало)")
     print("   2. Полный вывод (все данные)")
 
@@ -228,9 +228,9 @@ def test_modem_connection(com_port: str, full_output: bool = False):
         controller.disconnect()
         print("   ✅ Отключено")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("   ТЕСТ ЗАВЕРШЕН УСПЕШНО")
-    print("="*50)
+    print("=" * 50)
     return 0
 
 

@@ -4,8 +4,8 @@
 """
 
 import re
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Any
 
 
 @dataclass
@@ -221,7 +221,7 @@ class ModemParameters:
         ),
         "ewtests": ParamDef(
             command="ewtests",
-            description="EW tests (0=off, 1=on)",
+            description="EW cli (0=off, 1=on)",
             param_type="list",
             options=[0, 1],
             default=0
@@ -248,7 +248,7 @@ class ModemParameters:
         "timeslot": r"Time slotting:\s*(\w+)",
         "ttl": r"Retransmissions:\s*(\w+)",
         "ack": r"Acknowledge:\s*(\w+)",
-        "ewtests": r"EW tests:\s*(\w+)",
+        "ewtests": r"EW cli:\s*(\w+)",
         "trim": r"Crystal trim:\s*(\d+)",
         "led": r"Onboard LED is (ON|OFF)",
         "max_clients": r"Max clients:\s*(\d+)",
@@ -370,7 +370,7 @@ class ModemParameters:
             "timeslot": r"Time slotting:\s*(\w+)",
             "ttl": r"Retransmissions:\s*(\w+)",
             "ack": r"Acknowledge:\s*(\w+)",
-            "ewtests": r"EW tests:\s*(\w+)",
+            "ewtests": r"EW cli:\s*(\w+)",
             "trim": r"Crystal trim:\s*(\d+)",
             "led": r"Onboard LED is (ON|OFF)",
             "max_clients": r"Max clients:\s*(\d+)",

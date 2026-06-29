@@ -1,19 +1,18 @@
 __version__ = "1.0.0"
 
 from dataclasses import dataclass
-from typing import Any, Callable, Container
+from enum import Enum
+from typing import Callable, Container, Iterable, Tuple
+
+from construct import (
+    StreamError,
+)
 
 from .frames import crsf_frame, SYNC_RX_BYTE, SYNC_TX_BYTE
-from enum import Enum
-from typing import Any, Callable, Container, Iterable, Tuple
 from .handling import crsf_frame_crc
 from .payloads import (
     PacketsTypes,
     PAYLOADS_SIZE,
-)
-
-from construct import (
-    StreamError,
 )
 
 
@@ -34,11 +33,11 @@ class ProtocolStats:
 
 class CRSFParser:
     def __init__(
-        self,
-        consumer: Callable[
-            [],
-            Container,
-        ],
+            self,
+            consumer: Callable[
+                [],
+                Container,
+            ],
     ) -> None:
         self._input = bytearray()
         self._consumer = consumer
@@ -49,7 +48,7 @@ class CRSFParser:
         return self._stats
 
     def _validate_packet(
-        self, data: Iterable[int]
+            self, data: Iterable[int]
     ) -> Tuple[PacketValidationStatus, int, PacketsTypes]:
         size = data[0] - 2
         type = data[1]
@@ -62,8 +61,8 @@ class CRSFParser:
         return [PacketValidationStatus.INVALID, size, type]
 
     def parse_stream(self, input: bytearray) -> None:
-        	# MY Module address:		35893
-            # app address:  13334        
+        # MY Module address:		35893
+        # app address:  13334
         try:
             while len(input) > 0:
                 val = input[0]
